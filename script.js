@@ -13,6 +13,8 @@ const translations = {
         newChatBtn: "新建对话",
         clearChatBtn: "清空对话",
         saveChatBtn: "保存聊天记录",
+        sidebarToggleBtn: "显示角色生成",
+        sidebarToggleBtnActive: "隐藏角色生成",
         newChatConfirm: "确定要开始新的对话吗？当前对话内容将被清空。",
         noChatToSave: "没有聊天记录可保存",
         chatSaved: "聊天记录已保存",
@@ -81,6 +83,8 @@ const translations = {
         newChatBtn: "Новый диалог",
         clearChatBtn: "Очистить диалог",
         saveChatBtn: "Сохранить историю чата",
+        sidebarToggleBtn: "Показать создание персонажа",
+        sidebarToggleBtnActive: "Скрыть создание персонажа",
         newChatConfirm: "Вы уверены, что хотите начать новый диалог? Текущий диалог будет очищен.",
         noChatToSave: "Нет истории чата для сохранения",
         chatSaved: "История чата сохранена",
@@ -242,6 +246,24 @@ function saveChatHistory() {
     alert(t.chatSaved);
 }
 
+// 切换侧边栏显示/隐藏
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContainer = document.querySelector('.main-container');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    
+    sidebar.classList.toggle('active');
+    mainContainer.classList.toggle('sidebar-active');
+    
+    // 更新按钮文本
+    const t = translations[currentLanguage];
+    if (sidebar.classList.contains('active')) {
+        toggleBtn.textContent = t.sidebarToggleBtnActive;
+    } else {
+        toggleBtn.textContent = t.sidebarToggleBtn;
+    }
+}
+
 // 更新界面文本
 function updateUI() {
     const t = translations[currentLanguage];
@@ -253,6 +275,17 @@ function updateUI() {
     document.getElementById('newChatBtn').textContent = t.newChatBtn;
     document.getElementById('clearChatBtn').textContent = t.clearChatBtn;
     document.getElementById('saveChatBtn').textContent = t.saveChatBtn;
+    
+    // 更新侧边栏切换按钮文本
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    if (sidebar && toggleBtn) {
+        if (sidebar.classList.contains('active')) {
+            toggleBtn.textContent = t.sidebarToggleBtnActive;
+        } else {
+            toggleBtn.textContent = t.sidebarToggleBtn;
+        }
+    }
 }
 
 // 更新快速操作按钮
