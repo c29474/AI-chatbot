@@ -1,0 +1,23 @@
+一款聊天机器人，可为书籍作者和编剧生成姓名（包括姓、名和所在城市）。
+它还支持选择类型和国家/地区（例如俄罗斯、英国等）、奇幻题材（例如精灵、矮人等），并可根据简短描述生成书名，反之亦然。
+此外，它还能生成完整的角色信息（性别、年龄、身高、体重、发色和瞳色、职业以及性格特征）。并将角色信息导出为 PDF 文件。
+
+文本API配置（基于您的背单词服务）
+✅ WebSocket URL: wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat
+✅ modelId: xop3qwen1b7
+✅ APPID: 40061a4f
+✅ APIKey: 21aca9874cfd4465704c1a1498e2f931
+✅ APISecret: NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk
+图像API配置（基于您的AI角色生成器服务）
+✅ API URL: https://maas-api.cn-huabei-1.xf-yun.com/v2.1/tti
+✅ modelId: xopzimageturbo
+✅ resourceId: 0
+✅ APPID: 40061a4f
+✅ APIKey: 21aca9874cfd4465704c1a1498e2f931
+✅ APISecret: NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk
+
+Chatbot/
+├── main.py          # 后端API服务器
+├── index.html       # 前端网页界面
+├── test_image_api.py # 图像API测试脚本
+└── temp_files/      # 临时文件目录
