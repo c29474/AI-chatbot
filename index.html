@@ -2,391 +2,66 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>创意写作助手 - Creative Writing Assistant</title>
-    <style>
-        body { font-family: sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-        .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-        button { margin: 5px; padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        button:hover { background-color: #45a049; }
-        input, select, textarea { margin: 5px; padding: 5px; border: 1px solid #ddd; border-radius: 3px; }
-        .result { background-color: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 3px; }
-        .preset-section { background-color: #e8f4fd; padding: 10px; margin-bottom: 10px; border-radius: 3px; }
-        .preset-btn { background-color: #2196F3; margin: 2px; padding: 5px 10px; font-size: 12px; }
-        .preset-btn:hover { background-color: #0b7dda; }
-        .char-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .char-field { display: flex; align-items: center; }
-        .char-field label { min-width: 80px; font-weight: bold; }
-        .language-switch { position: fixed; top: 10px; right: 10px; background: white; padding: 5px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    </style>
+    <title>创意写作助手 - AI聊天机器人</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="language-switch">
-        <select id="lang" onchange="switchLanguage()">
-            <option value="zh">中文</option>
-            <option value="ru">Русский</option>
-        </select>
-    </div>
-
-    <h1 id="title">创意写作助手</h1>
-    
-    <!-- 聊天/指令部分 -->
-    <div class="section">
-        <h3 id="chatTitle">1. 聊天/指令</h3>
-        <input type="text" id="messageInput" placeholder="输入指令..." size="50">
-        <button onclick="sendChat()" id="sendBtn">发送</button>
-        <div id="chatResult" class="result"></div>
-    </div>
-
-    <!-- 生成角色姓名部分 -->
-    <div class="section">
-        <h3 id="nameTitle">2. 生成角色姓名</h3>
-        <div class="char-field">
-            <label id="nationalityLabel">国家:</label>
-            <input type="text" id="nameNationality" placeholder="如：俄罗斯" value="俄罗斯">
-        </div>
-        <div class="char-field">
-            <label id="fantasyLabel">类型 (可选):</label>
-            <input type="text" id="fantasyType" placeholder="如：精灵">
-        </div>
-        <button onclick="generateName()" id="generateNameBtn">生成姓名</button>
-        <div id="nameResult" class="result"></div>
-    </div>
-
-    <!-- 生成完整角色部分 -->
-    <div class="section">
-        <h3 id="charTitle">3. 生成角色 (完整档案)</h3>
-        
-        <!-- 预设模板 -->
-        <div class="preset-section">
-            <strong id="presetTitle">快速预设:</strong>
-            <button class="preset-btn" onclick="loadPreset('russian_knight')" id="preset1">俄罗斯骑士</button>
-            <button class="preset-btn" onclick="loadPreset('english_wizard')" id="preset2">英国巫师</button>
-            <button class="preset-btn" onclick="loadPreset('chinese_warrior')" id="preset3">中国武士</button>
-            <button class="preset-btn" onclick="loadPreset('elf_archer')" id="preset4">精灵弓箭手</button>
-            <button class="preset-btn" onclick="loadPreset('dwarf_blacksmith')" id="preset5">矮人铁匠</button>
-        </div>
-
-        <div class="char-form">
-            <div class="char-field">
-                <label id="genderLabel">性别:</label>
-                <select id="charGender">
-                    <option value="男">男</option>
-                    <option value="女">女</option>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-controls">
+                <button class="chat-control-btn" onclick="newConversation()" id="newChatBtn">新建对话</button>
+                <button class="chat-control-btn" onclick="clearConversation()" id="clearChatBtn">清空对话</button>
+                <button class="chat-control-btn save-chat-btn" onclick="saveChatHistory()" id="saveChatBtn">保存聊天记录</button>
+            </div>
+            <h1 id="title">创意写作助手</h1>
+            <p id="subtitle">AI聊天机器人 - 为作家和编剧提供创意支持</p>
+            <div class="language-switch">
+                <select id="lang" onchange="switchLanguage()">
+                    <option value="zh">中文</option>
+                    <option value="ru">Русский</option>
                 </select>
             </div>
-            <div class="char-field">
-                <label id="ageLabel">年龄:</label>
-                <input type="text" id="charAge" value="30岁" placeholder="年龄">
-            </div>
-            <div class="char-field">
-                <label id="heightLabel">身高:</label>
-                <input type="text" id="charHeight" value="175cm" placeholder="身高">
-            </div>
-            <div class="char-field">
-                <label id="weightLabel">体重:</label>
-                <input type="text" id="charWeight" value="70kg" placeholder="体重">
-            </div>
-            <div class="char-field">
-                <label id="hairLabel">发色:</label>
-                <input type="text" id="charHair" value="金色" placeholder="发色">
-            </div>
-            <div class="char-field">
-                <label id="eyesLabel">瞳色:</label>
-                <input type="text" id="charEyes" value="蓝色" placeholder="瞳色">
-            </div>
-            <div class="char-field">
-                <label id="professionLabel">职业:</label>
-                <input type="text" id="charProfession" value="骑士" placeholder="职业">
-            </div>
-            <div class="char-field">
-                <label id="personalityLabel">性格:</label>
-                <input type="text" id="charPersonality" value="忠诚，勇敢，略带忧郁" placeholder="性格">
-            </div>
-            <div class="char-field">
-                <label id="charNationalityLabel">国家:</label>
-                <input type="text" id="charNationality" value="英国" placeholder="国籍">
-            </div>
-            <div class="char-field">
-                <label id="raceLabel">奇幻种族:</label>
-                <input type="text" id="charRace" placeholder="如：人类">
-            </div>
         </div>
         
-        <button onclick="generateCharacter()" id="generateCharBtn">生成完整角色 (含图片和PDF)</button>
-        <div id="charResult" class="result"></div>
-        <div id="charImage"></div>
+        <div class="main-container">
+            <div class="chat-area">
+                <div class="quick-actions" id="quickActions">
+                    <!-- 快速操作按钮将通过JavaScript动态生成 -->
+                </div>
+                
+                <div class="preset-buttons" id="presetButtons">
+                    <!-- 预设角色按钮将通过JavaScript动态生成 -->
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message bot">
+                        <div class="message-content">
+                            <strong>🤖 创意写作助手</strong><br>
+                            <span id="welcomeMessage">您好！我是您的创意写作助手，我可以帮助您：</span>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                <li>💬 聊天交流创意想法</li>
+                                <li>👤 生成角色姓名和完整档案</li>
+                                <li>📚 根据描述生成书名，或根据书名生成描述</li>
+                                <li>🖼️ 生成角色图片并导出PDF档案</li>
+                            </ul>
+                            <div class="command-hint">试试说："生成一个俄罗斯骑士的角色" 或 "帮我起一个精灵的名字"</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="输入您的消息..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()" id="sendBtn">发送</button>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="character-form" id="characterForm">
+                    <!-- 角色生成表单将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
     </div>
-
-    <script>
-        const API_BASE = 'http://localhost:8000/api';
-        let currentLanguage = 'zh';
-
-        // 双语文本配置
-        const translations = {
-            zh: {
-                title: "创意写作助手",
-                chatTitle: "1. 聊天/指令",
-                sendBtn: "发送",
-                messagePlaceholder: "输入指令...",
-                nameTitle: "2. 生成角色姓名",
-                nationalityLabel: "国家:",
-                fantasyLabel: "类型 (可选):",
-                generateNameBtn: "生成姓名",
-                charTitle: "3. 生成角色 (完整档案)",
-                presetTitle: "快速预设:",
-                genderLabel: "性别:",
-                ageLabel: "年龄:",
-                heightLabel: "身高:",
-                weightLabel: "体重:",
-                hairLabel: "发色:",
-                eyesLabel: "瞳色:",
-                professionLabel: "职业:",
-                personalityLabel: "性格:",
-                charNationalityLabel: "国家:",
-                raceLabel: "奇幻种族:",
-                generateCharBtn: "生成完整角色 (含图片和PDF)",
-                presets: {
-                    russian_knight: "俄罗斯骑士",
-                    english_wizard: "英国巫师",
-                    chinese_warrior: "中国武士",
-                    elf_archer: "精灵弓箭手",
-                    dwarf_blacksmith: "矮人铁匠"
-                }
-            },
-            ru: {
-                title: "Творческий помощник писателя",
-                chatTitle: "1. Чат/Команды",
-                sendBtn: "Отправить",
-                messagePlaceholder: "Введите команду...",
-                nameTitle: "2. Создать имя персонажа",
-                nationalityLabel: "Страна:",
-                fantasyLabel: "Тип (опционально):",
-                generateNameBtn: "Создать имя",
-                charTitle: "3. Создать персонажа (полный профиль)",
-                presetTitle: "Быстрые шаблоны:",
-                genderLabel: "Пол:",
-                ageLabel: "Возраст:",
-                heightLabel: "Рост:",
-                weightLabel: "Вес:",
-                hairLabel: "Цвет волос:",
-                eyesLabel: "Цвет глаз:",
-                professionLabel: "Профессия:",
-                personalityLabel: "Характер:",
-                charNationalityLabel: "Страна:",
-                raceLabel: "Фэнтези раса:",
-                generateCharBtn: "Создать персонажа (с изображением и PDF)",
-                presets: {
-                    russian_knight: "Русский рыцарь",
-                    english_wizard: "Английский волшебник",
-                    chinese_warrior: "Китайский воин",
-                    elf_archer: "Эльфийский лучник",
-                    dwarf_blacksmith: "Дварф-кузнец"
-                }
-            }
-        };
-
-        // 预设配置
-        const presets = {
-            russian_knight: {
-                gender: "男",
-                age: "35岁",
-                height: "185cm",
-                weight: "85kg",
-                hair_color: "棕色",
-                eye_color: "灰色",
-                profession: "骑士",
-                personality: "勇敢，忠诚，严肃",
-                nationality: "俄罗斯",
-                fantasy_race: "人类"
-            },
-            english_wizard: {
-                gender: "男",
-                age: "65岁",
-                height: "175cm",
-                weight: "70kg",
-                hair_color: "白色",
-                eye_color: "蓝色",
-                profession: "巫师",
-                personality: "智慧，神秘，温和",
-                nationality: "英国",
-                fantasy_race: "人类"
-            },
-            chinese_warrior: {
-                gender: "男",
-                age: "28岁",
-                height: "178cm",
-                weight: "75kg",
-                hair_color: "黑色",
-                eye_color: "黑色",
-                profession: "武士",
-                personality: "忠诚，勇敢，正直",
-                nationality: "中国",
-                fantasy_race: "人类"
-            },
-            elf_archer: {
-                gender: "女",
-                age: "150岁",
-                height: "180cm",
-                weight: "60kg",
-                hair_color: "银色",
-                eye_color: "绿色",
-                profession: "弓箭手",
-                personality: "优雅，敏捷，神秘",
-                nationality: "精灵王国",
-                fantasy_race: "精灵"
-            },
-            dwarf_blacksmith: {
-                gender: "男",
-                age: "80岁",
-                height: "140cm",
-                weight: "90kg",
-                hair_color: "红色",
-                eye_color: "棕色",
-                profession: "铁匠",
-                personality: "坚韧，诚实，热情",
-                nationality: "矮人山脉",
-                fantasy_race: "矮人"
-            }
-        };
-
-        // 切换语言
-        function switchLanguage() {
-            currentLanguage = document.getElementById('lang').value;
-            updateUI();
-        }
-
-        // 更新界面文本
-        function updateUI() {
-            const t = translations[currentLanguage];
-            
-            // 更新标题和按钮
-            document.getElementById('title').textContent = t.title;
-            document.getElementById('chatTitle').textContent = t.chatTitle;
-            document.getElementById('sendBtn').textContent = t.sendBtn;
-            document.getElementById('messageInput').placeholder = t.messagePlaceholder;
-            document.getElementById('nameTitle').textContent = t.nameTitle;
-            document.getElementById('nationalityLabel').textContent = t.nationalityLabel;
-            document.getElementById('fantasyLabel').textContent = t.fantasyLabel;
-            document.getElementById('generateNameBtn').textContent = t.generateNameBtn;
-            document.getElementById('charTitle').textContent = t.charTitle;
-            document.getElementById('presetTitle').textContent = t.presetTitle;
-            document.getElementById('genderLabel').textContent = t.genderLabel;
-            document.getElementById('ageLabel').textContent = t.ageLabel;
-            document.getElementById('heightLabel').textContent = t.heightLabel;
-            document.getElementById('weightLabel').textContent = t.weightLabel;
-            document.getElementById('hairLabel').textContent = t.hairLabel;
-            document.getElementById('eyesLabel').textContent = t.eyesLabel;
-            document.getElementById('professionLabel').textContent = t.professionLabel;
-            document.getElementById('personalityLabel').textContent = t.personalityLabel;
-            document.getElementById('charNationalityLabel').textContent = t.charNationalityLabel;
-            document.getElementById('raceLabel').textContent = t.raceLabel;
-            document.getElementById('generateCharBtn').textContent = t.generateCharBtn;
-
-            // 更新预设按钮文本
-            Object.keys(t.presets).forEach(key => {
-                const btn = document.querySelector(`[onclick="loadPreset('${key}')"]`);
-                if (btn) btn.textContent = t.presets[key];
-            });
-        }
-
-        // 加载预设
-        function loadPreset(presetKey) {
-            const preset = presets[presetKey];
-            if (preset) {
-                document.getElementById('charGender').value = preset.gender;
-                document.getElementById('charAge').value = preset.age;
-                document.getElementById('charHeight').value = preset.height;
-                document.getElementById('charWeight').value = preset.weight;
-                document.getElementById('charHair').value = preset.hair_color;
-                document.getElementById('charEyes').value = preset.eye_color;
-                document.getElementById('charProfession').value = preset.profession;
-                document.getElementById('charPersonality').value = preset.personality;
-                document.getElementById('charNationality').value = preset.nationality;
-                document.getElementById('charRace').value = preset.fantasy_race;
-            }
-        }
-
-        // API调用函数
-        async function callApi(endpoint, method='GET', data=null) {
-            const options = {
-                method,
-                headers: { 'Content-Type': 'application/json' }
-            };
-            if (data) options.body = JSON.stringify(data);
-            try {
-                const response = await fetch(`${API_BASE}/${endpoint}`, options);
-                return await response.json();
-            } catch (error) {
-                console.error('API调用错误:', error);
-                return { error: error.message };
-            }
-        }
-
-        // 发送聊天消息
-        function sendChat() {
-            const message = document.getElementById('messageInput').value;
-            const lang = document.getElementById('lang').value;
-            callApi('chat', 'POST', { message, language: lang })
-                .then(data => {
-                    const resultText = currentLanguage === 'zh' ? 
-                        `<strong>助手：</strong> ${data.response}` :
-                        `<strong>Ассистент：</strong> ${data.response}`;
-                    document.getElementById('chatResult').innerHTML = resultText;
-                });
-        }
-
-        // 生成姓名
-        function generateName() {
-            const nationality = document.getElementById('nameNationality').value;
-            const fantasyType = document.getElementById('fantasyType').value;
-            const lang = document.getElementById('lang').value;
-            callApi(`generate/name?nationality=${nationality}&fantasy_type=${fantasyType}&language=${lang}`)
-                .then(data => {
-                    const resultText = currentLanguage === 'zh' ?
-                        `<strong>姓名：</strong>${data.name}<br><strong>城市：</strong>${data.city}` :
-                        `<strong>Имя：</strong>${data.name}<br><strong>Город：</strong>${data.city}`;
-                    document.getElementById('nameResult').innerHTML = resultText;
-                });
-        }
-
-        // 生成完整角色
-        async function generateCharacter() {
-            const request = {
-                gender: document.getElementById('charGender').value,
-                age: document.getElementById('charAge').value,
-                height: document.getElementById('charHeight').value,
-                weight: document.getElementById('charWeight').value,
-                hair_color: document.getElementById('charHair').value,
-                eye_color: document.getElementById('charEyes').value,
-                profession: document.getElementById('charProfession').value,
-                personality: document.getElementById('charPersonality').value,
-                nationality: document.getElementById('charNationality').value,
-                fantasy_race: document.getElementById('charRace').value,
-                language: document.getElementById('lang').value
-            };
-            const data = await callApi('generate/character', 'POST', request);
-            const resultDiv = document.getElementById('charResult');
-            const imgDiv = document.getElementById('charImage');
-            
-            if (currentLanguage === 'zh') {
-                resultDiv.innerHTML = `<strong>角色生成成功！</strong><br>
-                                     <strong>姓名：</strong>${data.character.name}<br>
-                                     <strong>描述：</strong>${data.character.description.substring(0, 150)}...<br>
-                                     <a href="${API_BASE}${data.pdf_url}" target="_blank">📥 下载角色PDF档案</a>`;
-            } else {
-                resultDiv.innerHTML = `<strong>Персонаж создан успешно！</strong><br>
-                                     <strong>Имя：</strong>${data.character.name}<br>
-                                     <strong>Описание：</strong>${data.character.description.substring(0, 150)}...<br>
-                                     <a href="${API_BASE}${data.pdf_url}" target="_blank">📥 Скачать PDF профиль</a>`;
-            }
-            
-            if (data.image_url) {
-                imgDiv.innerHTML = `<img src="${API_BASE}${data.image_url}" style="max-width: 300px; margin-top: 10px;">`;
-            }
-        }
-
-        // 初始化界面
-        updateUI();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
