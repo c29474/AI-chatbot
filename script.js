@@ -2,6 +2,46 @@ const API_BASE = 'http://localhost:8000/api';
 let currentLanguage = 'zh';
 let messageHistory = [];
 
+// 自动保存对话历史到本地存储
+function autoSaveChatHistory() {
+    if (messageHistory.length > 0) {
+        localStorage.setItem('chatHistory', JSON.stringify(messageHistory));
+        localStorage.setItem('chatLanguage', currentLanguage);
+    }
+}
+
+// 从本地存储加载对话历史
+function loadChatHistory() {
+    const savedHistory = localStorage.getItem('chatHistory');
+    const savedLanguage = localStorage.getItem('chatLanguage');
+    
+    if (savedHistory) {
+        messageHistory = JSON.parse(savedHistory);
+        if (savedLanguage) {
+            currentLanguage = savedLanguage;
+            document.getElementById('lang').value = currentLanguage;
+        }
+        
+        // 重新渲染消息
+        const messagesDiv = document.getElementById('chatMessages');
+        messagesDiv.innerHTML = '';
+        
+        messageHistory.forEach(msg => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${msg.isUser ? 'user' : 'bot'}`;
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${msg.content}
+                    <div class="message-time">${msg.time}</div>
+                </div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+        });
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+}
+
 // 双语文本配置
 const translations = {
     zh: {
@@ -13,6 +53,8 @@ const translations = {
         newChatBtn: "新建对话",
         clearChatBtn: "清空对话",
         saveChatBtn: "保存聊天记录",
+        sidebarToggleBtn: "显示角色生成",
+        sidebarToggleBtnActive: "隐藏角色生成",
         newChatConfirm: "确定要开始新的对话吗？当前对话内容将被清空。",
         noChatToSave: "没有聊天记录可保存",
         chatSaved: "聊天记录已保存",
@@ -81,6 +123,8 @@ const translations = {
         newChatBtn: "Новый диалог",
         clearChatBtn: "Очистить диалог",
         saveChatBtn: "Сохранить историю чата",
+        sidebarToggleBtn: "Показать создание персонажа",
+        sidebarToggleBtnActive: "Скрыть создание персонажа",
         newChatConfirm: "Вы уверены, что хотите начать новый диалог? Текущий диалог будет очищен.",
         noChatToSave: "Нет истории чата для сохранения",
         chatSaved: "История чата сохранена",
@@ -242,6 +286,24 @@ function saveChatHistory() {
     alert(t.chatSaved);
 }
 
+// 切换侧边栏显示/隐藏
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContainer = document.querySelector('.main-container');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    
+    sidebar.classList.toggle('active');
+    mainContainer.classList.toggle('sidebar-active');
+    
+    // 更新按钮文本
+    const t = translations[currentLanguage];
+    if (sidebar.classList.contains('active')) {
+        toggleBtn.textContent = t.sidebarToggleBtnActive;
+    } else {
+        toggleBtn.textContent = t.sidebarToggleBtn;
+    }
+}
+
 // 更新界面文本
 function updateUI() {
     const t = translations[currentLanguage];
@@ -253,6 +315,17 @@ function updateUI() {
     document.getElementById('newChatBtn').textContent = t.newChatBtn;
     document.getElementById('clearChatBtn').textContent = t.clearChatBtn;
     document.getElementById('saveChatBtn').textContent = t.saveChatBtn;
+    
+    // 更新侧边栏切换按钮文本
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    if (sidebar && toggleBtn) {
+        if (sidebar.classList.contains('active')) {
+            toggleBtn.textContent = t.sidebarToggleBtnActive;
+        } else {
+            toggleBtn.textContent = t.sidebarToggleBtn;
+        }
+    }
 }
 
 // 更新快速操作按钮
@@ -384,19 +457,25 @@ async function generateCustomCharacter() {
             // 调试：打印响应数据
             console.log('自定义角色生成响应:', response);
             
+            // 检查character对象是否存在
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                return;
+            }
+            
             let resultText = currentLanguage === 'zh' ?
                 `🎨 <strong>角色生成成功！</strong><br>
-                 👤 <strong>姓名：</strong>${character.name}<br>
+                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
                  📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>` :
                 `🎨 <strong>Персонаж создан успешно！</strong><br>
-                 👤 <strong>Имя：</strong>${character.name}<br>
+                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
                  📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
                 resultText += currentLanguage === 'zh' ?
-                    `<a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 下载PDF档案</a>` :
-                    `<a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 Скачать PDF</a>`;
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
             } else {
                 resultText += currentLanguage === 'zh' ?
                     `<span style="color: #666;">（PDF生成失败）</span>` :
@@ -439,6 +518,10 @@ function clearConversation() {
     const messagesDiv = document.getElementById('chatMessages');
     messagesDiv.innerHTML = '';
     messageHistory = [];
+    
+    // 清除本地存储
+    localStorage.removeItem('chatHistory');
+    localStorage.removeItem('chatLanguage');
     
     // 重新添加欢迎消息
     const t = translations[currentLanguage];
@@ -523,8 +606,8 @@ async function generateCharacterFromPreset(presetKey) {
             // 添加PDF下载链接
             if (response.pdf_url) {
                 resultText += currentLanguage === 'zh' ?
-                    `<a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 下载PDF档案</a>` :
-                    `<a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 Скачать PDF</a>`;
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
             } else {
                 resultText += currentLanguage === 'zh' ?
                     `<span style="color: #666;">（PDF生成失败）</span>` :
@@ -589,6 +672,9 @@ function addMessage(content, isUser = false) {
         isUser: isUser,
         time: time
     });
+    
+    // 自动保存到本地存储
+    autoSaveChatHistory();
 }
 
 // 显示输入指示器
@@ -725,15 +811,22 @@ async function sendMessage() {
                     addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
                 } else {
                     const character = response.character;
+                    
+                    // 检查character对象是否存在
+                    if (!character) {
+                        addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                        return;
+                    }
+                    
                     let resultText = currentLanguage === 'zh' ?
                         `🎨 <strong>角色生成成功！</strong><br>
-                         👤 <strong>姓名：</strong>${character.name}<br>
-                         📝 <strong>描述：</strong>${character.description.substring(0, 200)}...<br>
-                         <a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 下载PDF档案</a>` :
+                         👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                         📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
                         `🎨 <strong>Персонаж создан успешно！</strong><br>
-                         👤 <strong>Имя：</strong>${character.name}<br>
-                         📝 <strong>Описание：</strong>${character.description.substring(0, 200)}...<br>
-                         <a href="${API_BASE}${response.pdf_url}" target="_blank" class="download-link">📥 Скачать PDF</a>`;
+                         👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                         📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
                     
                     addMessage(resultText);
                     
@@ -788,20 +881,26 @@ async function sendMessage() {
 
 // 初始化
 function init() {
+    // 首先更新UI元素
     updateUI();
     updateQuickActions();
     updatePresetButtons();
     updateCharacterForm();
     
-    // 添加欢迎消息
-    setTimeout(() => {
-        const t = translations[currentLanguage];
-        addMessage(`💡 <strong>${t.usageTips.title}</strong><br>
-            • ${t.usageTips.character}<br>
-            • ${t.usageTips.name}<br>
-            • ${t.usageTips.book}<br>
-            • ${t.usageTips.chat}`);
-    }, 1000);
+    // 然后加载保存的对话历史
+    loadChatHistory();
+    
+    // 如果没有历史记录，添加欢迎消息
+    if (messageHistory.length === 0) {
+        setTimeout(() => {
+            const t = translations[currentLanguage];
+            addMessage(`💡 <strong>${t.usageTips.title}</strong><br>
+                • ${t.usageTips.character}<br>
+                • ${t.usageTips.name}<br>
+                • ${t.usageTips.book}<br>
+                • ${t.usageTips.chat}`);
+        }, 1000);
+    }
 }
 
 // 页面加载完成后初始化

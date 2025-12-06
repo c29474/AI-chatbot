@@ -319,26 +319,129 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
     pdf_filename = f"{TEMP_FILE_DIR}/{uuid.uuid4()}.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=A4)
     story = []
+    
+    # 创建支持多语言的样式
     styles = getSampleStyleSheet()
-
+    
+    # 使用更可靠的多语言字体方案
+    # 尝试使用支持Unicode的字体，优先使用系统字体
+    unicode_fonts = [
+        'Arial Unicode MS',  # 支持中文、英文、俄语
+        'DejaVu Sans',       # 开源Unicode字体
+        'SimSun',            # 宋体
+        'SimHei',            # 黑体
+        'Microsoft YaHei',   # 微软雅黑
+        'Helvetica'          # 默认字体
+    ]
+    
+    # 检查并注册可用的字体
+    available_fonts = []
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        
+        # 常见字体路径
+        font_paths = {
+            'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
+            'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',
+            'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',
+            'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',
+            'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf'  # 可能需要安装
+        }
+        
+        for font_name, font_path in font_paths.items():
+            if os.path.exists(font_path):
+                try:
+                    pdfmetrics.registerFont(TTFont(font_name, font_path))
+                    available_fonts.append(font_name)
+                    print(f"[PDF生成] 成功注册字体: {font_name}")
+                except Exception as e:
+                    print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
+                    continue
+    except ImportError:
+        print("[PDF生成] 无法导入字体模块")
+    
+    # 选择最佳字体
+    selected_font = 'Helvetica'  # 默认字体
+    for font in unicode_fonts:
+        if font in available_fonts:
+            selected_font = font
+            print(f"[PDF生成] 使用字体: {selected_font}")
+            break
+    
+    # 创建支持多语言的样式
     title_style = ParagraphStyle(
         'CustomTitle',
-        parent=styles['Heading1'],
+        fontName=selected_font,
         fontSize=16,
-        spaceAfter=30
+        spaceAfter=30,
+        encoding='utf-8'
     )
-    story.append(Paragraph(f"角色档案: {character_data.get('name', '未知角色')}", title_style))
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        fontName=selected_font,
+        fontSize=10,
+        leading=14,
+        encoding='utf-8'
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        fontName=selected_font,
+        fontSize=12,
+        spaceAfter=12,
+        encoding='utf-8'
+    )
+
+    # 根据语言生成标题
+    title_text = f"角色档案: {character_data.get('name', '未知角色')}"
+    story.append(Paragraph(title_text, title_style))
     story.append(Spacer(1, 12))
 
     if image_path and os.path.exists(image_path):
         try:
-            img = Image(image_path, width=2*inch, height=3*inch)
+            # 读取图片原始尺寸并保持比例
+            from PIL import Image as PILImage
+            
+            # 使用PIL获取图片原始尺寸
+            pil_img = PILImage.open(image_path)
+            original_width, original_height = pil_img.size
+            pil_img.close()
+            
+            # 计算合适的显示尺寸，保持原始比例
+            max_width = 4 * inch  # 最大宽度
+            max_height = 5 * inch  # 最大高度
+            
+            # 计算缩放比例
+            width_ratio = max_width / original_width
+            height_ratio = max_height / original_height
+            scale_ratio = min(width_ratio, height_ratio)
+            
+            # 计算缩放后的尺寸
+            display_width = original_width * scale_ratio
+            display_height = original_height * scale_ratio
+            
+            print(f"[PDF生成] 图片原始尺寸: {original_width}x{original_height}")
+            print(f"[PDF生成] 图片显示尺寸: {display_width:.1f}x{display_height:.1f}")
+            
+            # 创建图片对象，保持原始比例
+            img = Image(image_path, width=display_width, height=display_height)
             story.append(img)
             story.append(Spacer(1, 20))
+        except ImportError:
+            # 如果没有PIL库，使用默认尺寸但保持3:4比例
+            try:
+                img = Image(image_path, width=3*inch, height=4*inch)
+                story.append(img)
+                story.append(Spacer(1, 20))
+                print("[PDF生成] 使用默认尺寸，建议安装PIL库以获得更好的图片比例控制")
+            except Exception as e:
+                print(f"[PDF生成] 无法加载图片: {e}")
         except Exception as e:
-            print(f"[PDF生成] 无法加载图片: {e}")
+            print(f"[PDF生成] 处理图片时出错: {e}")
 
-    body_style = styles["BodyText"]
+    # 生成多语言详情
     details = [
         f"性别: {character_data.get('gender', '')}",
         f"年龄: {character_data.get('age', '')}",
@@ -350,25 +453,48 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
         f"奇幻种族: {character_data.get('fantasy_race', '无')}",
         f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     ]
+    
     for detail in details:
         story.append(Paragraph(detail, body_style))
         story.append(Spacer(1, 6))
 
     if character_data.get('description'):
         story.append(Spacer(1, 12))
-        story.append(Paragraph("角色描述:", styles['Heading2']))
+        story.append(Paragraph("角色描述:", heading_style))
         story.append(Spacer(1, 6))
         desc_style = ParagraphStyle(
             'DescriptionStyle',
-            parent=styles['BodyText'],
-            fontSize=10,
-            leading=14
+            fontName=selected_font,
+            fontSize=9,
+            leading=12,
+            encoding='utf-8'
         )
         description = character_data['description'][:500] + "..." if len(character_data['description']) > 500 else character_data['description']
         story.append(Paragraph(description, desc_style))
 
-    doc.build(story)
-    return pdf_filename
+    # 构建PDF文档
+    try:
+        doc.build(story)
+        print(f"[PDF生成] PDF文件已生成: {pdf_filename}")
+        return pdf_filename
+    except Exception as e:
+        print(f"[PDF生成] 构建PDF失败: {e}")
+        # 如果失败，尝试使用默认字体重新构建
+        try:
+            print("[PDF生成] 尝试使用默认字体重新构建...")
+            # 重新创建简单的PDF
+            from reportlab.pdfgen import canvas
+            c = canvas.Canvas(pdf_filename, pagesize=A4)
+            c.setFont("Helvetica", 12)
+            c.drawString(50, 750, "角色档案")
+            c.drawString(50, 730, f"姓名: {character_data.get('name', '未知角色')}")
+            c.drawString(50, 710, f"性别: {character_data.get('gender', '')}")
+            c.drawString(50, 690, f"年龄: {character_data.get('age', '')}")
+            c.save()
+            return pdf_filename
+        except Exception as fallback_error:
+            print(f"[PDF生成] 备用方案也失败: {fallback_error}")
+            raise fallback_error
 
 # ==================== API端点 ====================
 @app.get("/")
