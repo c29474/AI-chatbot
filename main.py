@@ -454,7 +454,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
         f"职业: {character_data.get('profession', '')}",
         f"性格: {character_data.get('personality', '')}",
         f"国籍/地区: {character_data.get('nationality', '')}",
-        f"奇幻种族: {character_data.get('fantasy_race', '无')}",
+        f"奇幻种族: {character_data.get('fantasy_race', '') if character_data.get('fantasy_race') else ''}",
         f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     ]
     
@@ -466,15 +466,109 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
         story.append(Spacer(1, 12))
         story.append(Paragraph("角色描述:", heading_style))
         story.append(Spacer(1, 6))
+        
+        # 改进的描述样式 - 更好的可读性
         desc_style = ParagraphStyle(
             'DescriptionStyle',
             fontName=selected_font,
-            fontSize=9,
-            leading=12,
-            encoding='utf-8'
+            fontSize=10,  # 稍微增大字体
+            leading=14,   # 增加行间距
+            encoding='utf-8',
+            spaceBefore=6,
+            spaceAfter=6,
+            firstLineIndent=20,  # 首行缩进
+            alignment=4,  # 两端对齐
+            wordWrap=True  # 自动换行
         )
-        description = character_data['description'][:500] + "..." if len(character_data['description']) > 500 else character_data['description']
-        story.append(Paragraph(description, desc_style))
+        
+        # 对描述文本进行格式化处理
+        description = character_data['description']
+        
+        # 清理Markdown格式标记
+        import re
+        description = re.sub(r'\*\*(.*?)\*\*', r'\1', description)  # 移除 **粗体**
+        description = re.sub(r'###\s*(.*?)\s*', r'\1', description)  # 移除 ### 标题
+        description = re.sub(r'---+\s*', '', description)  # 移除 --- 分隔线
+        description = re.sub(r'\*{3,}', '', description)  # 移除 *** 分隔线
+        
+        # 改进的格式化逻辑：按照角色名称、外貌描写、性格描写结构分段
+        # 尝试识别描述中的不同部分
+        name_pattern = r'([^。！？.!?]*?(姓名|名字|角色名)[^。！？.!?]*?[。！？.!?])'
+        appearance_pattern = r'([^。！？.!?]*?(外貌|长相|外表|形象|发色|瞳色|身高|体重|眼睛|头发|皮肤)[^。！？.!?]*?[。！？.!?])'
+        personality_pattern = r'([^。！？.!?]*?(性格|个性|脾气|品质|特点|性情|品格)[^。！？.!?]*?[。！？.!?])'
+        race_pattern = r'([^。！？.!?]*?(种族|血统|物种|奇幻种族)[^。！？.!?]*?[。！？.!?])'
+        
+        # 提取不同部分的句子
+        name_sentences = re.findall(name_pattern, description)
+        appearance_sentences = re.findall(appearance_pattern, description)
+        personality_sentences = re.findall(personality_pattern, description)
+        race_sentences = re.findall(race_pattern, description)
+        
+        # 如果无法自动识别结构，使用智能分段
+        if len(name_sentences) > 0 or len(appearance_sentences) > 0 or len(personality_sentences) > 0 or len(race_sentences) > 0:
+            # 按照识别到的结构分段
+            if name_sentences:
+                story.append(Paragraph("▪️ 角色信息", heading_style))
+                story.append(Spacer(1, 4))
+                for sentence in name_sentences:
+                    story.append(Paragraph(sentence[0], desc_style))
+                story.append(Spacer(1, 8))
+            
+            if appearance_sentences:
+                story.append(Paragraph("▪️ 外貌描写", heading_style))
+                story.append(Spacer(1, 4))
+                for sentence in appearance_sentences:
+                    story.append(Paragraph(sentence[0], desc_style))
+                story.append(Spacer(1, 8))
+            
+            if personality_sentences:
+                story.append(Paragraph("▪️ 性格特点", heading_style))
+                story.append(Spacer(1, 4))
+                for sentence in personality_sentences:
+                    story.append(Paragraph(sentence[0], desc_style))
+                story.append(Spacer(1, 8))
+            
+            if race_sentences:
+                story.append(Paragraph("▪️ 种族设定", heading_style))
+                story.append(Spacer(1, 4))
+                for sentence in race_sentences:
+                    story.append(Paragraph(sentence[0], desc_style))
+                story.append(Spacer(1, 8))
+            
+            # 添加剩余的描述内容（如果有）
+            remaining_text = description
+            for sentence_group in [name_sentences, appearance_sentences, personality_sentences, race_sentences]:
+                for sentence in sentence_group:
+                    remaining_text = remaining_text.replace(sentence[0], '', 1)
+            
+            if remaining_text.strip():
+                story.append(Paragraph("▪️ 背景故事", heading_style))
+                story.append(Spacer(1, 4))
+                story.append(Paragraph(remaining_text.strip(), desc_style))
+        else:
+            # 如果无法识别结构，使用智能分段
+            sentences = re.split(r'[。！？.!?]', description)
+            sentences = [s.strip() for s in sentences if s.strip()]
+            
+            # 将句子分组为段落（每段3-4句）
+            paragraphs = []
+            current_para = []
+            for sentence in sentences:
+                current_para.append(sentence)
+                if len(current_para) >= 3 and len(''.join(current_para)) > 100:
+                    paragraphs.append('。'.join(current_para) + '。')
+                    current_para = []
+            
+            if current_para:
+                paragraphs.append('。'.join(current_para) + '。')
+            
+            # 添加格式化后的段落
+            for i, para in enumerate(paragraphs):
+                if i == 0:
+                    story.append(Paragraph("▪️ 角色介绍", heading_style))
+                    story.append(Spacer(1, 4))
+                story.append(Paragraph(para, desc_style))
+                story.append(Spacer(1, 8))
 
     # 构建PDF文档
     try:

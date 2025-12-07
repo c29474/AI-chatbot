@@ -463,13 +463,13 @@ async function generateCustomCharacter() {
                 return;
             }
             
-            let resultText = currentLanguage === 'zh' ?
-                `🎨 <strong>角色生成成功！</strong><br>
-                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                 📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>` :
-                `🎨 <strong>Персонаж создан успешно！</strong><br>
-                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                 📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>`;
+                    let resultText = currentLanguage === 'zh' ?
+                        `🎨 <strong>角色生成成功！</strong><br>
+                         👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                        `🎨 <strong>Персонаж создан успешно！</strong><br>
+                         👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
@@ -556,10 +556,8 @@ function handleQuickAction(action) {
             break;
             
         case 'generateCharacter':
-            // 随机选择预设角色
-            const presetKeys = Object.keys(presets);
-            const randomPresetKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
-            generateCharacterFromPreset(randomPresetKey);
+            // 创建真正随机的角色，让AI自由发挥
+            generateRandomCharacter();
             return;
             
         case 'generateBookTitle':
@@ -596,6 +594,115 @@ function handleQuickAction(action) {
     sendMessage();
 }
 
+// 生成真正随机的角色
+async function generateRandomCharacter() {
+    const t = translations[currentLanguage];
+    
+    // 随机生成各种角色属性
+    const genders = ['男', '女'];
+    const ages = ['18岁', '22岁', '28岁', '35岁', '45岁', '60岁', '150岁', '300岁'];
+    const heights = ['160cm', '170cm', '175cm', '180cm', '185cm', '190cm', '200cm', '140cm'];
+    const weights = ['50kg', '60kg', '65kg', '70kg', '75kg', '80kg', '85kg', '90kg'];
+    const hairColors = ['黑色', '棕色', '金色', '红色', '白色', '银色', '蓝色', '紫色', '绿色'];
+    const eyeColors = ['黑色', '棕色', '蓝色', '绿色', '灰色', '琥珀色', '紫色', '红色', '金色'];
+    const professions = ['骑士', '巫师', '弓箭手', '战士', '法师', '盗贼', '牧师', '商人', '农民', '学者', '艺术家', '医生'];
+    const personalities = ['勇敢', '智慧', '神秘', '温和', '优雅', '敏捷', '坚韧', '诚实', '幽默', '严肃', '热情', '冷静'];
+    const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度', '埃及', '希腊'];
+    const fantasyRaces = ['人类', '精灵', '矮人', '兽人', '龙族', '天使', '恶魔', '吸血鬼', '狼人', '妖精', '元素生物', '机械生命'];
+    
+    // 随机选择属性
+    const randomRequest = {
+        gender: genders[Math.floor(Math.random() * genders.length)],
+        age: ages[Math.floor(Math.random() * ages.length)],
+        height: heights[Math.floor(Math.random() * heights.length)],
+        weight: weights[Math.floor(Math.random() * weights.length)],
+        hair_color: hairColors[Math.floor(Math.random() * hairColors.length)],
+        eye_color: eyeColors[Math.floor(Math.random() * eyeColors.length)],
+        profession: professions[Math.floor(Math.random() * professions.length)],
+        personality: Array.from({length: 3}, () => personalities[Math.floor(Math.random() * personalities.length)]).join('，'),
+        nationality: nationalities[Math.floor(Math.random() * nationalities.length)],
+        fantasy_race: Math.random() > 0.3 ? fantasyRaces[Math.floor(Math.random() * fantasyRaces.length)] : '',
+        language: currentLanguage
+    };
+    
+    // 创建提示文本
+    const promptText = currentLanguage === 'zh' ? 
+        `生成一个${randomRequest.nationality}的${randomRequest.fantasy_race ? randomRequest.fantasy_race + '' : ''}${randomRequest.profession}角色：
+        - 性别：${randomRequest.gender}
+        - 年龄：${randomRequest.age}
+        - 身高：${randomRequest.height}，体重：${randomRequest.weight}
+        - 发色：${randomRequest.hair_color}，瞳色：${randomRequest.eye_color}
+        - 性格：${randomRequest.personality}
+        ${randomRequest.fantasy_race ? '- 种族：' + randomRequest.fantasy_race : ''}` :
+        `Создать персонажа ${randomRequest.nationality} ${randomRequest.fantasy_race ? randomRequest.fantasy_race + ' ' : ''}${randomRequest.profession}：
+        - Пол: ${randomRequest.gender}
+        - Возраст: ${randomRequest.age}
+        - Рост: ${randomRequest.height}, Вес: ${randomRequest.weight}
+        - Цвет волос: ${randomRequest.hair_color}, Цвет глаз: ${randomRequest.eye_color}
+        - Характер: ${randomRequest.personality}
+        ${randomRequest.fantasy_race ? '- Раса: ' + randomRequest.fantasy_race : ''}`;
+    
+    // 添加用户消息
+    addMessage(promptText, true);
+    
+    // 显示输入指示器
+    showTypingIndicator();
+    
+    try {
+        const response = await callApi('generate/character', 'POST', randomRequest);
+        
+        if (response.error) {
+            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
+        } else {
+            const character = response.character;
+            
+            // 检查character对象是否存在
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                return;
+            }
+            
+            let resultText = currentLanguage === 'zh' ?
+                `🎨 <strong>随机角色生成成功！</strong><br>
+                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                `🎨 <strong>Случайный персонаж создан успешно！</strong><br>
+                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+            
+            // 添加PDF下载链接
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">（PDF生成失败）</span>` :
+                    `<span style="color: #666;">（PDF не создан）</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // 添加图片显示
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
+                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                }, 100);
+            }
+        }
+    } catch (error) {
+        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
+    } finally {
+        hideTypingIndicator();
+    }
+}
+
 // 从预设生成角色
 async function generateCharacterFromPreset(presetKey) {
     const preset = presets[presetKey];
@@ -627,10 +734,10 @@ async function generateCharacterFromPreset(presetKey) {
             let resultText = currentLanguage === 'zh' ?
                 `🎨 <strong>角色生成成功！</strong><br>
                  👤 <strong>姓名：</strong>${character.name}<br>
-                 📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>` :
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
                 `🎨 <strong>Персонаж создан успешно！</strong><br>
                  👤 <strong>Имя：</strong>${character.name}<br>
-                 📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>`;
+                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
@@ -881,11 +988,11 @@ async function sendMessage() {
                     let resultText = currentLanguage === 'zh' ?
                         `🎨 <strong>角色生成成功！</strong><br>
                          👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                         📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>
                          <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
                         `🎨 <strong>Персонаж создан успешно！</strong><br>
                          👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                         📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>
                          <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
                     
                     addMessage(resultText);
