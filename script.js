@@ -53,7 +53,7 @@ const translations = {
         newChatBtn: "新建对话",
         clearChatBtn: "清空对话",
         saveChatBtn: "保存聊天记录",
-        sidebarToggleBtn: "显示角色生成",
+        sidebarToggleBtn: "自定义角色生成",
         sidebarToggleBtnActive: "隐藏角色生成",
         newChatConfirm: "确定要开始新的对话吗？当前对话内容将被清空。",
         noChatToSave: "没有聊天记录可保存",
@@ -135,7 +135,7 @@ const translations = {
             chat: "Творческий чат"
         },
         presetTitle: "Шаблоны персонажей",
-        customCharacterTitle: "Создание персонажа",
+        customCharacterTitle: "Создание собственного персонажа",
         genderLabel: "Пол",
         ageLabel: "Возраст",
         heightLabel: "Рост",
@@ -543,22 +543,51 @@ function handleQuickAction(action) {
     
     switch(action) {
         case 'generateName':
+            // 随机选择国家和奇幻种族
+            const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度'];
+            const fantasyTypes = ['精灵', '矮人', '兽人', '龙族', '巫师', '魔法师', '吸血鬼', '狼人', '天使', '恶魔'];
+            
+            const randomNationality = nationalities[Math.floor(Math.random() * nationalities.length)];
+            const randomFantasyType = Math.random() > 0.5 ? fantasyTypes[Math.floor(Math.random() * fantasyTypes.length)] : '';
+            
             message = currentLanguage === 'zh' ? 
-                "请帮我生成一个角色姓名" : 
-                "Пожалуйста, создайте имя персонажа";
+                `请帮我生成一个${randomNationality}${randomFantasyType ? '的' + randomFantasyType : ''}角色姓名` : 
+                `Пожалуйста, создайте имя персонажа ${randomNationality}${randomFantasyType ? ' ' + randomFantasyType : ''}`;
             break;
+            
         case 'generateCharacter':
-            // 直接调用生成角色函数，不通过消息
-            generateCharacterFromPreset('chinese_warrior');
+            // 随机选择预设角色
+            const presetKeys = Object.keys(presets);
+            const randomPresetKey = presetKeys[Math.floor(Math.random() * presetKeys.length)];
+            generateCharacterFromPreset(randomPresetKey);
             return;
+            
         case 'generateBookTitle':
+            // 随机选择题材和风格
+            const genres = ['奇幻', '科幻', '爱情', '悬疑', '历史', '武侠', '都市', '恐怖', '冒险', '推理'];
+            const styles = ['史诗级', '浪漫', '惊悚', '幽默', '黑暗', '治愈', '热血', '悬疑', '温馨', '惊险'];
+            
+            const randomGenre = genres[Math.floor(Math.random() * genres.length)];
+            const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+            
             message = currentLanguage === 'zh' ?
-                "请帮我生成一个书名" :
-                "Пожалуйста, создайте название книги";
+                `请帮我生成一个${randomStyle}的${randomGenre}小说书名` :
+                `Пожалуйста, создайте ${randomStyle} название ${randomGenre} романа`;
             break;
+            
         case 'chat':
+            // 随机选择聊天话题
+            const topics = [
+                "给我一些创意写作的建议",
+                "如何塑造一个令人难忘的角色？",
+                "小说开头应该怎么写才能吸引读者？",
+                "如何构建一个完整的世界观？",
+                "对话写作有什么技巧？"
+            ];
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            
             message = currentLanguage === 'zh' ?
-                "我们来聊聊创意写作吧" :
+                randomTopic :
                 "Давайте поговорим о творческом письме";
             break;
     }
