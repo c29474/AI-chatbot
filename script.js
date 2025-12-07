@@ -358,6 +358,11 @@ function updateCharacterForm() {
     const t = translations[currentLanguage];
     const characterFormDiv = document.getElementById('characterForm');
     
+    // 预设选项数据
+    const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度', '埃及', '希腊', '巴西', '墨西哥', '韩国', '泰国', '澳大利亚', '加拿大'];
+    const professions = ['骑士', '巫师', '弓箭手', '战士', '法师', '盗贼', '牧师', '商人', '农民', '学者', '艺术家', '医生', '工程师', '教师', '厨师', '水手', '猎人', '铁匠', '炼金术士', '吟游诗人'];
+    const fantasyRaces = ['人类', '精灵', '矮人', '兽人', '龙族', '天使', '恶魔', '吸血鬼', '狼人', '妖精', '元素生物', '机械生命', '亡灵', '半人马', '巨魔', '哥布林', '娜迦', '德鲁伊'];
+    
     characterFormDiv.innerHTML = `
         <strong>${t.customCharacterTitle}:</strong>
         <div class="form-group">
@@ -381,45 +386,185 @@ function updateCharacterForm() {
         </div>
         <div class="form-group">
             <label>${t.hairLabel}</label>
-            <input type="text" id="customHair" placeholder="${t.hairPlaceholder}" value="黑色">
+            <select id="customHair">
+                <option value="黑色">黑色</option>
+                <option value="棕色">棕色</option>
+                <option value="金色">金色</option>
+                <option value="红色">红色</option>
+                <option value="白色">白色</option>
+                <option value="银色">银色</option>
+                <option value="蓝色">蓝色</option>
+                <option value="紫色">紫色</option>
+                <option value="绿色">绿色</option>
+                <option value="粉色">粉色</option>
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customHairInput" placeholder="输入自定义发色" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.eyesLabel}</label>
-            <input type="text" id="customEyes" placeholder="${t.eyesPlaceholder}" value="棕色">
+            <select id="customEyes">
+                <option value="黑色">黑色</option>
+                <option value="棕色">棕色</option>
+                <option value="蓝色">蓝色</option>
+                <option value="绿色">绿色</option>
+                <option value="灰色">灰色</option>
+                <option value="琥珀色">琥珀色</option>
+                <option value="紫色">紫色</option>
+                <option value="红色">红色</option>
+                <option value="金色">金色</option>
+                <option value="银色">银色</option>
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customEyesInput" placeholder="输入自定义瞳色" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.professionLabel}</label>
-            <input type="text" id="customProfession" placeholder="${t.professionPlaceholder}" value="骑士">
+            <select id="customProfession">
+                ${professions.map(prof => `<option value="${prof}">${prof}</option>`).join('')}
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customProfessionInput" placeholder="输入自定义职业" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.personalityLabel}</label>
-            <input type="text" id="customPersonality" placeholder="${t.personalityPlaceholder}" value="勇敢，忠诚">
+            <select id="customPersonality">
+                <option value="勇敢，忠诚">勇敢，忠诚</option>
+                <option value="智慧，神秘">智慧，神秘</option>
+                <option value="温和，优雅">温和，优雅</option>
+                <option value="敏捷，坚韧">敏捷，坚韧</option>
+                <option value="诚实，幽默">诚实，幽默</option>
+                <option value="热情，冷静">热情，冷静</option>
+                <option value="果断，谨慎">果断，谨慎</option>
+                <option value="乐观，外向">乐观，外向</option>
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customPersonalityInput" placeholder="输入自定义性格" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.nationalityLabel}</label>
-            <input type="text" id="customNationality" placeholder="${t.nationalityPlaceholder}" value="中国">
+            <select id="customNationality">
+                ${nationalities.map(nation => `<option value="${nation}">${nation}</option>`).join('')}
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customNationalityInput" placeholder="输入自定义国家" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.raceLabel}</label>
-            <input type="text" id="customRace" placeholder="${t.racePlaceholder}" value="人类">
+            <select id="customRace">
+                ${fantasyRaces.map(race => `<option value="${race}">${race}</option>`).join('')}
+                <option value="custom">自定义...</option>
+            </select>
+            <input type="text" id="customRaceInput" placeholder="输入自定义种族" style="display: none; margin-top: 5px;">
         </div>
         <button class="generate-custom-btn" onclick="generateCustomCharacter()">${t.generateCustomBtn}</button>
     `;
+    
+    // 添加下拉框事件监听器
+    setupCustomInputHandlers();
+}
+
+// 设置自定义输入处理
+function setupCustomInputHandlers() {
+    // 发色下拉框处理
+    const hairSelect = document.getElementById('customHair');
+    const hairInput = document.getElementById('customHairInput');
+    hairSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            hairInput.style.display = 'block';
+            hairInput.value = '';
+        } else {
+            hairInput.style.display = 'none';
+            hairInput.value = '';
+        }
+    });
+    
+    // 瞳色下拉框处理
+    const eyesSelect = document.getElementById('customEyes');
+    const eyesInput = document.getElementById('customEyesInput');
+    eyesSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            eyesInput.style.display = 'block';
+            eyesInput.value = '';
+        } else {
+            eyesInput.style.display = 'none';
+            eyesInput.value = '';
+        }
+    });
+    
+    // 职业下拉框处理
+    const professionSelect = document.getElementById('customProfession');
+    const professionInput = document.getElementById('customProfessionInput');
+    professionSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            professionInput.style.display = 'block';
+            professionInput.value = '';
+        } else {
+            professionInput.style.display = 'none';
+            professionInput.value = '';
+        }
+    });
+    
+    // 性格下拉框处理
+    const personalitySelect = document.getElementById('customPersonality');
+    const personalityInput = document.getElementById('customPersonalityInput');
+    personalitySelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            personalityInput.style.display = 'block';
+            personalityInput.value = '';
+        } else {
+            personalityInput.style.display = 'none';
+            personalityInput.value = '';
+        }
+    });
+    
+    // 国籍下拉框处理
+    const nationalitySelect = document.getElementById('customNationality');
+    const nationalityInput = document.getElementById('customNationalityInput');
+    nationalitySelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            nationalityInput.style.display = 'block';
+            nationalityInput.value = '';
+        } else {
+            nationalityInput.style.display = 'none';
+            nationalityInput.value = '';
+        }
+    });
+    
+    // 种族下拉框处理
+    const raceSelect = document.getElementById('customRace');
+    const raceInput = document.getElementById('customRaceInput');
+    raceSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            raceInput.style.display = 'block';
+            raceInput.value = '';
+        } else {
+            raceInput.style.display = 'none';
+            raceInput.value = '';
+        }
+    });
 }
 
 // 生成自定义角色
 async function generateCustomCharacter() {
+    // 获取表单值，处理自定义输入
+    const getFieldValue = (selectId, inputId) => {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        return select.value === 'custom' ? input.value : select.value;
+    };
+    
     const request = {
         gender: document.getElementById('customGender').value,
         age: document.getElementById('customAge').value,
         height: document.getElementById('customHeight').value,
         weight: document.getElementById('customWeight').value,
-        hair_color: document.getElementById('customHair').value,
-        eye_color: document.getElementById('customEyes').value,
-        profession: document.getElementById('customProfession').value,
-        personality: document.getElementById('customPersonality').value,
-        nationality: document.getElementById('customNationality').value,
-        fantasy_race: document.getElementById('customRace').value,
+        hair_color: getFieldValue('customHair', 'customHairInput'),
+        eye_color: getFieldValue('customEyes', 'customEyesInput'),
+        profession: getFieldValue('customProfession', 'customProfessionInput'),
+        personality: getFieldValue('customPersonality', 'customPersonalityInput'),
+        nationality: getFieldValue('customNationality', 'customNationalityInput'),
+        fantasy_race: getFieldValue('customRace', 'customRaceInput'),
         language: currentLanguage
     };
     
