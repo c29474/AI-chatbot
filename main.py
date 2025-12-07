@@ -10,13 +10,14 @@ from datetime import datetime
 from time import mktime
 from wsgiref.handlers import format_date_time
 from urllib.parse import urlparse, urlencode
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, Union
 import websocket
 import threading
+import asyncio
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -645,13 +646,29 @@ class SimpleCharacterRequest(BaseModel):
     description: str
     language: str = "zh"
 
+async def check_request_disconnected(fastapi_request: Request) -> bool:
+    """检查FastAPI请求是否已被中止"""
+    try:
+        # 检查连接状态
+        if fastapi_request.is_disconnected():
+            print("[请求中止] 检测到客户端已断开连接")
+            return True
+        return False
+    except Exception as e:
+        print(f"[请求中止检查错误] {e}")
+        return False
+
 @app.post("/api/generate/character")
-async def generate_character(request: Union[CharacterGenRequest, SimpleCharacterRequest]):
+async def generate_character(fastapi_request: Request, request: Union[CharacterGenRequest, SimpleCharacterRequest]):
     # 支持两种请求格式：完整的角色属性或简单的描述文本
     if hasattr(request, 'description') and not hasattr(request, 'gender'):
         # 处理简单描述格式
         simple_request = request
         print(f"[角色生成] 处理简单描述请求: {simple_request.description[:50]}...")
+        
+        # 在关键步骤前检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
         
         # 使用AI从描述中提取角色属性
         extract_prompt = f"""
@@ -748,6 +765,10 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         description_messages = build_spark_text_prompt(description_prompt, "你是一个角色设计师。", simple_request.language)
         character_description = get_spark_text_response(description_messages)
         
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         if not character_description:
             character_description = simple_request.description  # 如果生成失败，使用原始描述
         
@@ -755,6 +776,10 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
         name_messages = build_spark_text_prompt(name_prompt, "", simple_request.language)
         character_name = get_spark_text_response(name_messages).strip()
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
         
         if not character_name:
             character_name = "未知角色"
@@ -765,6 +790,11 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         
         # 3. 生成角色图片
         print(f"[角色生成] 尝试为简单描述生成图片...")
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         image_gen_prompt = f"""
         全身肖像，{character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
         发色：{character_data.get('hair_color', '未知')}，瞳色：{character_data.get('eye_color', '未知')}，
@@ -773,12 +803,20 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         """
         image_path = call_tti_api(image_gen_prompt)
         
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         if image_path:
             print(f"[角色生成] 图片生成成功: {image_path}")
         else:
             print(f"[角色生成] 图片生成失败，将继续生成PDF")
         
         # 4. 生成PDF
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         pdf_path = generate_character_pdf(character_data, image_path)
         
         return {
@@ -805,6 +843,10 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         messages = build_spark_text_prompt(prompt, "你是一个角色设计师。", request.language)
         character_description = get_spark_text_response(messages)
         
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         if not character_description:
             raise HTTPException(status_code=500, detail="生成角色描述失败")
 
@@ -812,6 +854,10 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
         name_messages = build_spark_text_prompt(name_prompt, "", request.language)
         character_name = get_spark_text_response(name_messages).strip()
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
         
         if not character_name:
             character_name = "未知角色"
@@ -825,7 +871,16 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
         {request.nationality}风格，高清，艺术插画，背景虚化
         """
         print(f"[角色生成] 开始生成图片...")
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         image_path = call_tti_api(image_gen_prompt)
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
         
         if image_path:
             print(f"[角色生成] 图片生成成功: {image_path}")
@@ -851,6 +906,11 @@ async def generate_character(request: Union[CharacterGenRequest, SimpleCharacter
 
         # 5. 生成PDF
         print(f"[角色生成] 开始生成PDF...")
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         pdf_path = generate_character_pdf(character_data, image_path)
         
         return {

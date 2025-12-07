@@ -61,9 +61,9 @@ const translations = {
         noChatToSave: "没有聊天记录可保存",
         chatSaved: "聊天记录已保存",
         quickActions: {
-            generateName: "生成角色姓名",
-            generateCharacter: "生成完整角色",
-            generateBookTitle: "生成书名",
+            generateName: "随机生成角色姓名",
+            generateCharacter: "随机生成完整角色",
+            generateBookTitle: "随机生成书名",
             chat: "创意聊天"
         },
         presetTitle: "预设角色模板",
