@@ -73,7 +73,7 @@ def test_tti_api(prompt: str) -> Optional[str]:
         print(f"[图像API测试] 鉴权头生成成功")
         print(f"[图像API测试] 发送请求，提示词: {prompt}")
         
-        # 根据API文档构造完整的请求体
+        # 根据星火图像API官方文档构造正确的请求体
         request_data = {
             "header": {
                 "app_id": TTI_APP_ID,
@@ -83,13 +83,25 @@ def test_tti_api(prompt: str) -> Optional[str]:
             "parameter": {
                 "chat": {
                     "domain": IMAGE_MODEL_ID,
-                    "width": 512,
-                    "height": 512
+                    "width": 768,  # 根据API文档使用768x768分辨率
+                    "height": 768,
+                    "seed": 42,  # 根据API文档添加参数
+                    "num_inference_steps": 20,
+                    "guidance_scale": 5.0,
+                    "scheduler": "Euler"
                 }
             },
             "payload": {
                 "message": {
-                    "text": [{"role": "user", "content": prompt}]
+                    "text": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ]
+                },
+                "negative_prompts": {  # 根据API文档添加负面提示词
+                    "text": ""
                 }
             }
         }

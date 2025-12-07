@@ -4,6 +4,82 @@ let messageHistory = [];
 let currentRequestController = null; // 用于中止当前请求
 let isGenerating = false; // 标记是否正在生成
 
+// 页面初始化
+function initializePage() {
+    // 设置语言选择器
+    document.getElementById('lang').value = currentLanguage;
+    
+    // 更新界面文本
+    updateUI();
+    
+    // 生成欢迎消息
+    generateWelcomeMessage();
+    
+    // 更新快速操作按钮
+    updateQuickActions();
+    
+    // 更新预设角色按钮
+    updatePresetButtons();
+    
+    // 更新角色生成表单
+    updateCharacterForm();
+    
+    // 加载聊天历史
+    loadChatHistory();
+}
+
+// 更新界面文本
+function updateUI() {
+    const t = translations[currentLanguage];
+    
+    // 更新页面标题
+    document.getElementById('pageTitle').textContent = `${t.title} - AI聊天机器人`;
+    
+    // 更新主标题和副标题
+    document.getElementById('title').textContent = t.title;
+    document.getElementById('subtitle').textContent = t.subtitle;
+    
+    // 更新按钮文本
+    document.getElementById('newChatBtn').textContent = t.newChatBtn;
+    document.getElementById('clearChatBtn').textContent = t.clearChatBtn;
+    document.getElementById('saveChatBtn').textContent = t.saveChatBtn;
+    document.getElementById('sidebarToggleBtn').textContent = t.sidebarToggleBtn;
+    document.getElementById('sendBtn').textContent = t.sendBtn;
+    document.getElementById('stopBtn').textContent = currentLanguage === 'zh' ? '停止' : 'Стоп';
+    
+    // 更新输入框占位符
+    document.getElementById('messageInput').placeholder = t.messagePlaceholder;
+    
+    // 更新语言选择器选项
+    const langSelect = document.getElementById('lang');
+    langSelect.options[0].text = '中文';
+    langSelect.options[1].text = 'Русский';
+}
+
+// 语言切换函数
+function switchLanguage() {
+    const langSelect = document.getElementById('lang');
+    currentLanguage = langSelect.value;
+    
+    // 更新界面文本
+    updateUI();
+    
+    // 重新生成欢迎消息
+    generateWelcomeMessage();
+    
+    // 重新更新快速操作按钮
+    updateQuickActions();
+    
+    // 重新更新预设角色按钮
+    updatePresetButtons();
+    
+    // 重新更新角色生成表单
+    updateCharacterForm();
+    
+    // 保存语言设置
+    localStorage.setItem('chatLanguage', currentLanguage);
+}
+
 // 自动保存对话历史到本地存储
 function autoSaveChatHistory() {
     if (messageHistory.length > 0) {
@@ -43,6 +119,11 @@ function loadChatHistory() {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 }
+
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initializePage();
+});
 
 // 双语文本配置
 const translations = {
@@ -252,15 +333,6 @@ const presets = {
     }
 };
 
-// 切换语言
-function switchLanguage() {
-    currentLanguage = document.getElementById('lang').value;
-    updateUI();
-    updateQuickActions();
-    updatePresetButtons();
-    updateCharacterForm();
-}
-
 // 保存聊天记录
 function saveChatHistory() {
     const t = translations[currentLanguage];
@@ -306,28 +378,22 @@ function toggleSidebar() {
     }
 }
 
-// 更新界面文本
-function updateUI() {
+// 生成欢迎消息
+function generateWelcomeMessage() {
     const t = translations[currentLanguage];
-    document.getElementById('title').textContent = t.title;
-    document.getElementById('subtitle').textContent = t.subtitle;
-    document.getElementById('welcomeMessage').textContent = t.welcomeMessage;
-    document.getElementById('sendBtn').textContent = t.sendBtn;
-    document.getElementById('messageInput').placeholder = t.messagePlaceholder;
-    document.getElementById('newChatBtn').textContent = t.newChatBtn;
-    document.getElementById('clearChatBtn').textContent = t.clearChatBtn;
-    document.getElementById('saveChatBtn').textContent = t.saveChatBtn;
+    const welcomeContent = document.getElementById('welcomeContent');
     
-    // 更新侧边栏切换按钮文本
-    const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebarToggleBtn');
-    if (sidebar && toggleBtn) {
-        if (sidebar.classList.contains('active')) {
-            toggleBtn.textContent = t.sidebarToggleBtnActive;
-        } else {
-            toggleBtn.textContent = t.sidebarToggleBtn;
-        }
-    }
+    let welcomeHTML = `<strong>🤖 ${t.title}</strong><br>`;
+    welcomeHTML += `<span>${t.welcomeMessage}</span>`;
+    welcomeHTML += `<ul style="margin-top: 10px; padding-left: 20px;">`;
+    welcomeHTML += `<li>💬 ${t.features.chat}</li>`;
+    welcomeHTML += `<li>👤 ${t.features.character}</li>`;
+    welcomeHTML += `<li>📚 ${t.features.book}</li>`;
+    welcomeHTML += `<li>🖼️ ${t.features.pdf}</li>`;
+    welcomeHTML += `</ul>`;
+    welcomeHTML += `<div class="command-hint">${t.commandHint}</div>`;
+    
+    welcomeContent.innerHTML = welcomeHTML;
 }
 
 // 更新快速操作按钮
@@ -360,10 +426,116 @@ function updateCharacterForm() {
     const t = translations[currentLanguage];
     const characterFormDiv = document.getElementById('characterForm');
     
-    // 预设选项数据
-    const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度', '埃及', '希腊', '巴西', '墨西哥', '韩国', '泰国', '澳大利亚', '加拿大'];
-    const professions = ['骑士', '巫师', '弓箭手', '战士', '法师', '盗贼', '牧师', '商人', '农民', '学者', '艺术家', '医生', '工程师', '教师', '厨师', '水手', '猎人', '铁匠', '炼金术士', '吟游诗人'];
-    const fantasyRaces = ['人类', '精灵', '矮人', '兽人', '龙族', '天使', '恶魔', '吸血鬼', '狼人', '妖精', '元素生物', '机械生命', '亡灵', '半人马', '巨魔', '哥布林', '娜迦', '德鲁伊'];
+    // 双语选项数据
+    const hairColors = {
+        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
+        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
+        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
+        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
+        '白色': currentLanguage === 'zh' ? '白色' : 'Белый',
+        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный',
+        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
+        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
+        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
+        '粉色': currentLanguage === 'zh' ? '粉色' : 'Розовый'
+    };
+    
+    const eyeColors = {
+        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
+        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
+        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
+        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
+        '灰色': currentLanguage === 'zh' ? '灰色' : 'Серый',
+        '琥珀色': currentLanguage === 'zh' ? '琥珀色' : 'Янтарный',
+        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
+        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
+        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
+        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный'
+    };
+    
+    const personalities = {
+        '勇敢，忠诚': currentLanguage === 'zh' ? '勇敢，忠诚' : 'Храбрый, верный',
+        '智慧，神秘': currentLanguage === 'zh' ? '智慧，神秘' : 'Мудрый, таинственный',
+        '温和，优雅': currentLanguage === 'zh' ? '温和，优雅' : 'Мягкий, элегантный',
+        '敏捷，坚韧': currentLanguage === 'zh' ? '敏捷，坚韧' : 'Проворный, стойкий',
+        '诚实，幽默': currentLanguage === 'zh' ? '诚实，幽默' : 'Честный, юмористичный',
+        '热情，冷静': currentLanguage === 'zh' ? '热情，冷静' : 'Страстный, спокойный',
+        '果断，谨慎': currentLanguage === 'zh' ? '果断，谨慎' : 'Решительный, осторожный',
+        '乐观，外向': currentLanguage === 'zh' ? '乐观，外向' : 'Оптимистичный, экстравертный'
+    };
+    
+    const nationalities = {
+        '中国': currentLanguage === 'zh' ? '中国' : 'Китай',
+        '俄罗斯': currentLanguage === 'zh' ? '俄罗斯' : 'Россия',
+        '英国': currentLanguage === 'zh' ? '英国' : 'Великобритания',
+        '日本': currentLanguage === 'zh' ? '日本' : 'Япония',
+        '法国': currentLanguage === 'zh' ? '法国' : 'Франция',
+        '德国': currentLanguage === 'zh' ? '德国' : 'Германия',
+        '意大利': currentLanguage === 'zh' ? '意大利' : 'Италия',
+        '西班牙': currentLanguage === 'zh' ? '西班牙' : 'Испания',
+        '美国': currentLanguage === 'zh' ? '美国' : 'США',
+        '印度': currentLanguage === 'zh' ? '印度' : 'Индия',
+        '埃及': currentLanguage === 'zh' ? '埃及' : 'Египет',
+        '希腊': currentLanguage === 'zh' ? '希腊' : 'Греция',
+        '巴西': currentLanguage === 'zh' ? '巴西' : 'Бразилия',
+        '墨西哥': currentLanguage === 'zh' ? '墨西哥' : 'Мексика',
+        '韩国': currentLanguage === 'zh' ? '韩国' : 'Корея',
+        '泰国': currentLanguage === 'zh' ? '泰国' : 'Таиланд',
+        '澳大利亚': currentLanguage === 'zh' ? '澳大利亚' : 'Австралия',
+        '加拿大': currentLanguage === 'zh' ? '加拿大' : 'Канада'
+    };
+    
+    const professions = {
+        '骑士': currentLanguage === 'zh' ? '骑士' : 'Рыцарь',
+        '巫师': currentLanguage === 'zh' ? '巫师' : 'Волшебник',
+        '弓箭手': currentLanguage === 'zh' ? '弓箭手' : 'Лучник',
+        '战士': currentLanguage === 'zh' ? '战士' : 'Воин',
+        '法师': currentLanguage === 'zh' ? '法师' : 'Маг',
+        '盗贼': currentLanguage === 'zh' ? '盗贼' : 'Вор',
+        '牧师': currentLanguage === 'zh' ? '牧师' : 'Священник',
+        '商人': currentLanguage === 'zh' ? '商人' : 'Торговец',
+        '农民': currentLanguage === 'zh' ? '农民' : 'Фермер',
+        '学者': currentLanguage === 'zh' ? '学者' : 'Ученый',
+        '艺术家': currentLanguage === 'zh' ? '艺术家' : 'Художник',
+        '医生': currentLanguage === 'zh' ? '医生' : 'Доктор',
+        '工程师': currentLanguage === 'zh' ? '工程师' : 'Инженер',
+        '教师': currentLanguage === 'zh' ? '教师' : 'Учитель',
+        '厨师': currentLanguage === 'zh' ? '厨师' : 'Повар',
+        '水手': currentLanguage === 'zh' ? '水手' : 'Моряк',
+        '猎人': currentLanguage === 'zh' ? '猎人' : 'Охотник',
+        '铁匠': currentLanguage === 'zh' ? '铁匠' : 'Кузнец',
+        '炼金术士': currentLanguage === 'zh' ? '炼金术士' : 'Алхимик',
+        '吟游诗人': currentLanguage === 'zh' ? '吟游诗人' : 'Бард'
+    };
+    
+    const fantasyRaces = {
+        '人类': currentLanguage === 'zh' ? '人类' : 'Человек',
+        '精灵': currentLanguage === 'zh' ? '精灵' : 'Эльф',
+        '矮人': currentLanguage === 'zh' ? '矮人' : 'Гном',
+        '兽人': currentLanguage === 'zh' ? '兽人' : 'Орк',
+        '龙族': currentLanguage === 'zh' ? '龙族' : 'Дракон',
+        '天使': currentLanguage === 'zh' ? '天使' : 'Ангел',
+        '恶魔': currentLanguage === 'zh' ? '恶魔' : 'Демон',
+        '吸血鬼': currentLanguage === 'zh' ? '吸血鬼' : 'Вампир',
+        '狼人': currentLanguage === 'zh' ? '狼人' : 'Оборотень',
+        '妖精': currentLanguage === 'zh' ? '妖精' : 'Фея',
+        '元素生物': currentLanguage === 'zh' ? '元素生物' : 'Элементаль',
+        '机械生命': currentLanguage === 'zh' ? '机械生命' : 'Механическое существо',
+        '亡灵': currentLanguage === 'zh' ? '亡灵' : 'Нежить',
+        '半人马': currentLanguage === 'zh' ? '半人马' : 'Кентавр',
+        '巨魔': currentLanguage === 'zh' ? '巨魔' : 'Тролль',
+        '哥布林': currentLanguage === 'zh' ? '哥布林' : 'Гоблин',
+        '娜迦': currentLanguage === 'zh' ? '娜迦' : 'Нага',
+        '德鲁伊': currentLanguage === 'zh' ? '德鲁伊' : 'Друид'
+    };
+    
+    const customText = currentLanguage === 'zh' ? '自定义...' : 'Свой вариант...';
+    const customHairPlaceholder = currentLanguage === 'zh' ? '输入自定义发色' : 'Введите свой цвет волос';
+    const customEyesPlaceholder = currentLanguage === 'zh' ? '输入自定义瞳色' : 'Введите свой цвет глаз';
+    const customProfessionPlaceholder = currentLanguage === 'zh' ? '输入自定义职业' : 'Введите свою профессию';
+    const customPersonalityPlaceholder = currentLanguage === 'zh' ? '输入自定义性格' : 'Введите свой характер';
+    const customNationalityPlaceholder = currentLanguage === 'zh' ? '输入自定义国家' : 'Введите свою страну';
+    const customRacePlaceholder = currentLanguage === 'zh' ? '输入自定义种族' : 'Введите свою расу';
     
     characterFormDiv.innerHTML = `
         <strong>${t.customCharacterTitle}:</strong>
@@ -376,88 +548,63 @@ function updateCharacterForm() {
         </div>
         <div class="form-group">
             <label>${t.ageLabel}</label>
-            <input type="text" id="customAge" placeholder="${t.agePlaceholder}" value="30岁">
+            <input type="text" id="customAge" placeholder="${t.agePlaceholder}" value="${currentLanguage === 'zh' ? '30岁' : '30 лет'}">
         </div>
         <div class="form-group">
             <label>${t.heightLabel}</label>
-            <input type="text" id="customHeight" placeholder="${t.heightPlaceholder}" value="175cm">
+            <input type="text" id="customHeight" placeholder="${t.heightPlaceholder}" value="${currentLanguage === 'zh' ? '175cm' : '175см'}">
         </div>
         <div class="form-group">
             <label>${t.weightLabel}</label>
-            <input type="text" id="customWeight" placeholder="${t.weightPlaceholder}" value="70kg">
+            <input type="text" id="customWeight" placeholder="${t.weightPlaceholder}" value="${currentLanguage === 'zh' ? '70kg' : '70кг'}">
         </div>
         <div class="form-group">
             <label>${t.hairLabel}</label>
             <select id="customHair">
-                <option value="黑色">黑色</option>
-                <option value="棕色">棕色</option>
-                <option value="金色">金色</option>
-                <option value="红色">红色</option>
-                <option value="白色">白色</option>
-                <option value="银色">银色</option>
-                <option value="蓝色">蓝色</option>
-                <option value="紫色">紫色</option>
-                <option value="绿色">绿色</option>
-                <option value="粉色">粉色</option>
-                <option value="custom">自定义...</option>
+                ${Object.entries(hairColors).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customHairInput" placeholder="输入自定义发色" style="display: none; margin-top: 5px;">
+            <input type="text" id="customHairInput" placeholder="${customHairPlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.eyesLabel}</label>
             <select id="customEyes">
-                <option value="黑色">黑色</option>
-                <option value="棕色">棕色</option>
-                <option value="蓝色">蓝色</option>
-                <option value="绿色">绿色</option>
-                <option value="灰色">灰色</option>
-                <option value="琥珀色">琥珀色</option>
-                <option value="紫色">紫色</option>
-                <option value="红色">红色</option>
-                <option value="金色">金色</option>
-                <option value="银色">银色</option>
-                <option value="custom">自定义...</option>
+                ${Object.entries(eyeColors).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customEyesInput" placeholder="输入自定义瞳色" style="display: none; margin-top: 5px;">
+            <input type="text" id="customEyesInput" placeholder="${customEyesPlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.professionLabel}</label>
             <select id="customProfession">
-                ${professions.map(prof => `<option value="${prof}">${prof}</option>`).join('')}
-                <option value="custom">自定义...</option>
+                ${Object.entries(professions).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customProfessionInput" placeholder="输入自定义职业" style="display: none; margin-top: 5px;">
+            <input type="text" id="customProfessionInput" placeholder="${customProfessionPlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.personalityLabel}</label>
             <select id="customPersonality">
-                <option value="勇敢，忠诚">勇敢，忠诚</option>
-                <option value="智慧，神秘">智慧，神秘</option>
-                <option value="温和，优雅">温和，优雅</option>
-                <option value="敏捷，坚韧">敏捷，坚韧</option>
-                <option value="诚实，幽默">诚实，幽默</option>
-                <option value="热情，冷静">热情，冷静</option>
-                <option value="果断，谨慎">果断，谨慎</option>
-                <option value="乐观，外向">乐观，外向</option>
-                <option value="custom">自定义...</option>
+                ${Object.entries(personalities).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customPersonalityInput" placeholder="输入自定义性格" style="display: none; margin-top: 5px;">
+            <input type="text" id="customPersonalityInput" placeholder="${customPersonalityPlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.nationalityLabel}</label>
             <select id="customNationality">
-                ${nationalities.map(nation => `<option value="${nation}">${nation}</option>`).join('')}
-                <option value="custom">自定义...</option>
+                ${Object.entries(nationalities).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customNationalityInput" placeholder="输入自定义国家" style="display: none; margin-top: 5px;">
+            <input type="text" id="customNationalityInput" placeholder="${customNationalityPlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <div class="form-group">
             <label>${t.raceLabel}</label>
             <select id="customRace">
-                ${fantasyRaces.map(race => `<option value="${race}">${race}</option>`).join('')}
-                <option value="custom">自定义...</option>
+                ${Object.entries(fantasyRaces).map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}
+                <option value="custom">${customText}</option>
             </select>
-            <input type="text" id="customRaceInput" placeholder="输入自定义种族" style="display: none; margin-top: 5px;">
+            <input type="text" id="customRaceInput" placeholder="${customRacePlaceholder}" style="display: none; margin-top: 5px;">
         </div>
         <button class="generate-custom-btn" onclick="generateCustomCharacter()">${t.generateCustomBtn}</button>
     `;

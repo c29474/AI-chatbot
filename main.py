@@ -33,7 +33,7 @@ SPARK_TEXT_WS_URL = "wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat"
 # 文本服务的modelId - 根据用户提供的背单词服务配置
 TEXT_MODEL_ID = "xop3qwen1b7"
 
-# 2. 星火图像生成API配置 (HTTP) - 根据用户提供的正确配置
+# 2. 星火图像生成API配置 (HTTP) - 根据用户提供的实际配置
 TTI_API_URL = "https://maas-api.cn-huabei-1.xf-yun.com/v2.1/tti"
 TTI_APP_ID = "40061a4f"
 TTI_API_SECRET = "NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk"
@@ -166,8 +166,9 @@ def get_spark_text_response(messages: list) -> str:
         wst.daemon = True
         wst.start()
         
-        if not response_received.wait(timeout=10):
-            print("[超时] 未在10秒内收到完整响应")
+        if not response_received.wait(timeout=30):
+            print("[超时] 未在30秒内收到完整响应")
+            return "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。"
         
         return full_response.strip()
         
@@ -227,23 +228,35 @@ def call_tti_api(prompt: str) -> Optional[str]:
         print(f"[图像API] 鉴权头: Authorization: {headers.get('Authorization', '')[:50]}...")
         print(f"[图像API] 鉴权头: date: {headers.get('date', '')}")
         
-        # 根据API文档构造完整的请求体
+        # 根据星火图像API官方文档构造请求体
         request_data = {
             "header": {
                 "app_id": TTI_APP_ID,
-                "uid": str(uuid.uuid4())[:32],
+                "uid": str(uuid.uuid4())[:32],  # 可选字段，最大长度32
                 "patch_id": ["123456"]  # 必需的字段
             },
             "parameter": {
                 "chat": {
                     "domain": IMAGE_MODEL_ID,
-                    "width": 512,
-                    "height": 512
+                    "width": 768,  # 根据API文档使用768x768分辨率
+                    "height": 768,
+                    "seed": 42,  # 根据API文档添加参数
+                    "num_inference_steps": 20,
+                    "guidance_scale": 5.0,
+                    "scheduler": "Euler"
                 }
             },
             "payload": {
                 "message": {
-                    "text": [{"role": "user", "content": prompt}]
+                    "text": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ]
+                },
+                "negative_prompts": {  # 根据API文档添加负面提示词
+                    "text": ""
                 }
             }
         }
@@ -253,11 +266,12 @@ def call_tti_api(prompt: str) -> Optional[str]:
         # 调试：打印完整的请求数据
         print(f"[图像API] 完整请求数据:\n{json.dumps(request_data, indent=2, ensure_ascii=False)}")
         
+        # 增加图像生成超时时间，图像生成通常需要更长时间
         response = requests.post(
             TTI_API_URL,
             headers=headers,
             json=request_data,
-            timeout=30
+            timeout=120  # 增加到120秒
         )
         
         print(f"[图像API] 响应状态码: {response.status_code}")
@@ -278,19 +292,54 @@ def call_tti_api(prompt: str) -> Optional[str]:
             # 尝试不同的响应结构
             image_data_base64 = None
             
-            # 尝试路径1: payload.choices.text[0].content
+            # 尝试路径1: payload.choices.text[0].content (文本API格式)
             choices = result.get("payload", {}).get("choices", {})
             if isinstance(choices, dict):
                 text_items = choices.get("text", [])
                 if text_items and isinstance(text_items, list) and len(text_items) > 0:
                     image_data_base64 = text_items[0].get("content")
             
-            # 尝试路径2: payload.message.text[0].content
+            # 尝试路径2: payload.message.text[0].content (文本API格式)
             if not image_data_base64:
                 message = result.get("payload", {}).get("message", {})
                 text_items = message.get("text", [])
                 if text_items and isinstance(text_items, list) and len(text_items) > 0:
                     image_data_base64 = text_items[0].get("content")
+            
+            # 尝试路径3: payload.tti (图像API格式)
+            if not image_data_base64:
+                tti_data = result.get("payload", {}).get("tti", {})
+                if isinstance(tti_data, dict):
+                    image_data_base64 = tti_data.get("image")
+            
+            # 尝试路径4: 直接查找base64数据
+            if not image_data_base64:
+                # 在payload中查找包含base64数据的字段
+                payload = result.get("payload", {})
+                for key, value in payload.items():
+                    if isinstance(value, str) and "base64" in value:
+                        image_data_base64 = value
+                        break
+            
+            # 尝试路径5: 深度搜索整个响应结构
+            if not image_data_base64:
+                def deep_search_for_base64(obj, path=""):
+                    if isinstance(obj, dict):
+                        for k, v in obj.items():
+                            result = deep_search_for_base64(v, f"{path}.{k}")
+                            if result:
+                                return result
+                    elif isinstance(obj, list):
+                        for i, item in enumerate(obj):
+                            result = deep_search_for_base64(item, f"{path}[{i}]")
+                            if result:
+                                return result
+                    elif isinstance(obj, str) and "base64" in obj:
+                        print(f"[图像API] 在路径 {path} 找到base64数据")
+                        return obj
+                    return None
+                
+                image_data_base64 = deep_search_for_base64(result, "root")
             
             if image_data_base64:
                 # 移除可能的数据URI前缀
@@ -309,6 +358,13 @@ def call_tti_api(prompt: str) -> Optional[str]:
                     return None
             else:
                 print("[图像API] 响应中未找到图像数据")
+                print(f"[图像API] 调试信息: 完整响应结构 - {json.dumps(result, indent=2, ensure_ascii=False)}")
+                
+                # 尝试打印响应中的关键字段以帮助调试
+                print(f"[图像API] 调试 - header.code: {result.get('header', {}).get('code')}")
+                print(f"[图像API] 调试 - header.message: {result.get('header', {}).get('message')}")
+                print(f"[图像API] 调试 - payload keys: {list(result.get('payload', {}).keys())}")
+                
                 return None
         else:
             print(f"[图像API HTTP错误] {response.status_code}: {response.text}")
@@ -320,10 +376,52 @@ def call_tti_api(prompt: str) -> Optional[str]:
         traceback.print_exc()
         return None
 
-def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> str:
+def generate_character_pdf(character_data: dict, image_path: Optional[str], language: str = "zh") -> str:
     pdf_filename = f"{TEMP_FILE_DIR}/{uuid.uuid4()}.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=A4)
     story = []
+    
+    # 双语文本配置
+    pdf_translations = {
+        "zh": {
+            "title": "角色档案",
+            "description": "角色描述",
+            "name_info": "角色信息",
+            "appearance": "外貌描写",
+            "personality": "性格特点",
+            "race": "种族设定",
+            "background": "背景故事",
+            "introduction": "角色介绍",
+            "gender": "性别",
+            "age": "年龄",
+            "height_weight": "身高/体重",
+            "hair_eyes": "发色/瞳色",
+            "profession": "职业",
+            "nationality": "国籍/地区",
+            "fantasy_race": "奇幻种族",
+            "generated_time": "生成时间"
+        },
+        "ru": {
+            "title": "Профиль персонажа",
+            "description": "Описание персонажа",
+            "name_info": "Информация о персонаже",
+            "appearance": "Внешность",
+            "personality": "Характер",
+            "race": "Раса",
+            "background": "Предыстория",
+            "introduction": "Введение персонажа",
+            "gender": "Пол",
+            "age": "Возраст",
+            "height_weight": "Рост/Вес",
+            "hair_eyes": "Цвет волос/Цвет глаз",
+            "profession": "Профессия",
+            "nationality": "Национальность/Регион",
+            "fantasy_race": "Фэнтези раса",
+            "generated_time": "Время создания"
+        }
+    }
+    
+    t = pdf_translations.get(language, pdf_translations["zh"])
     
     # 创建支持多语言的样式
     styles = getSampleStyleSheet()
@@ -400,7 +498,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
     )
 
     # 根据语言生成标题
-    title_text = f"角色档案: {character_data.get('name', '未知角色')}"
+    title_text = f"{t['title']}: {character_data.get('name', '未知角色')}"
     story.append(Paragraph(title_text, title_style))
     story.append(Spacer(1, 12))
 
@@ -448,15 +546,15 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
 
     # 生成多语言详情
     details = [
-        f"性别: {character_data.get('gender', '')}",
-        f"年龄: {character_data.get('age', '')}",
-        f"身高/体重: {character_data.get('height', '')} / {character_data.get('weight', '')}",
-        f"发色/瞳色: {character_data.get('hair_color', '')} / {character_data.get('eye_color', '')}",
-        f"职业: {character_data.get('profession', '')}",
-        f"性格: {character_data.get('personality', '')}",
-        f"国籍/地区: {character_data.get('nationality', '')}",
-        f"奇幻种族: {character_data.get('fantasy_race', '') if character_data.get('fantasy_race') else ''}",
-        f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        f"{t['gender']}: {character_data.get('gender', '')}",
+        f"{t['age']}: {character_data.get('age', '')}",
+        f"{t['height_weight']}: {character_data.get('height', '')} / {character_data.get('weight', '')}",
+        f"{t['hair_eyes']}: {character_data.get('hair_color', '')} / {character_data.get('eye_color', '')}",
+        f"{t['profession']}: {character_data.get('profession', '')}",
+        f"{t['personality']}: {character_data.get('personality', '')}",
+        f"{t['nationality']}: {character_data.get('nationality', '')}",
+        f"{t['fantasy_race']}: {character_data.get('fantasy_race', '') if character_data.get('fantasy_race') else ''}",
+        f"{t['generated_time']}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     ]
     
     for detail in details:
@@ -465,7 +563,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
 
     if character_data.get('description'):
         story.append(Spacer(1, 12))
-        story.append(Paragraph("角色描述:", heading_style))
+        story.append(Paragraph(f"{t['description']}:", heading_style))
         story.append(Spacer(1, 6))
         
         # 改进的描述样式 - 更好的可读性
@@ -509,28 +607,28 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
         if len(name_sentences) > 0 or len(appearance_sentences) > 0 or len(personality_sentences) > 0 or len(race_sentences) > 0:
             # 按照识别到的结构分段
             if name_sentences:
-                story.append(Paragraph("▪️ 角色信息", heading_style))
+                story.append(Paragraph(f"▪️ {t['name_info']}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in name_sentences:
                     story.append(Paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if appearance_sentences:
-                story.append(Paragraph("▪️ 外貌描写", heading_style))
+                story.append(Paragraph(f"▪️ {t['appearance']}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in appearance_sentences:
                     story.append(Paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if personality_sentences:
-                story.append(Paragraph("▪️ 性格特点", heading_style))
+                story.append(Paragraph(f"▪️ {t['personality']}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in personality_sentences:
                     story.append(Paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if race_sentences:
-                story.append(Paragraph("▪️ 种族设定", heading_style))
+                story.append(Paragraph(f"▪️ {t['race']}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in race_sentences:
                     story.append(Paragraph(sentence[0], desc_style))
@@ -543,7 +641,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
                     remaining_text = remaining_text.replace(sentence[0], '', 1)
             
             if remaining_text.strip():
-                story.append(Paragraph("▪️ 背景故事", heading_style))
+                story.append(Paragraph(f"▪️ {t['background']}", heading_style))
                 story.append(Spacer(1, 4))
                 story.append(Paragraph(remaining_text.strip(), desc_style))
         else:
@@ -551,12 +649,14 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
             sentences = re.split(r'[。！？.!?]', description)
             sentences = [s.strip() for s in sentences if s.strip()]
             
-            # 将句子分组为段落（每段3-4句）
+            # 将句子分组为段落（不截断，让模型自由发挥）
             paragraphs = []
             current_para = []
             for sentence in sentences:
                 current_para.append(sentence)
-                if len(current_para) >= 3 and len(''.join(current_para)) > 100:
+                # 不进行截断，让模型生成的描述完整显示
+                # 只有当句子数量达到5个或当前段落长度超过200字符时，才考虑分段
+                if len(current_para) >= 5 or len(''.join(current_para)) > 200:
                     paragraphs.append('。'.join(current_para) + '。')
                     current_para = []
             
@@ -566,7 +666,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
             # 添加格式化后的段落
             for i, para in enumerate(paragraphs):
                 if i == 0:
-                    story.append(Paragraph("▪️ 角色介绍", heading_style))
+                    story.append(Paragraph(f"▪️ {t['introduction']}", heading_style))
                     story.append(Spacer(1, 4))
                 story.append(Paragraph(para, desc_style))
                 story.append(Spacer(1, 8))
@@ -585,10 +685,10 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
             from reportlab.pdfgen import canvas
             c = canvas.Canvas(pdf_filename, pagesize=A4)
             c.setFont("Helvetica", 12)
-            c.drawString(50, 750, "角色档案")
-            c.drawString(50, 730, f"姓名: {character_data.get('name', '未知角色')}")
-            c.drawString(50, 710, f"性别: {character_data.get('gender', '')}")
-            c.drawString(50, 690, f"年龄: {character_data.get('age', '')}")
+            c.drawString(50, 750, t['title'])
+            c.drawString(50, 730, f"{t['name_info'].replace('角色信息', '姓名')}: {character_data.get('name', '未知角色')}")
+            c.drawString(50, 710, f"{t['gender']}: {character_data.get('gender', '')}")
+            c.drawString(50, 690, f"{t['age']}: {character_data.get('age', '')}")
             c.save()
             return pdf_filename
         except Exception as fallback_error:
@@ -650,7 +750,7 @@ async def check_request_disconnected(fastapi_request: Request) -> bool:
     """检查FastAPI请求是否已被中止"""
     try:
         # 检查连接状态
-        if fastapi_request.is_disconnected():
+        if await fastapi_request.is_disconnected():
             print("[请求中止] 检测到客户端已断开连接")
             return True
         return False
@@ -690,8 +790,16 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         只返回JSON格式，不要其他内容。
         """
         
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
+        
         extract_messages = build_spark_text_prompt(extract_prompt, "你是一个角色属性提取器。", simple_request.language)
         extracted_data = get_spark_text_response(extract_messages)
+        
+        # 检查请求是否中止
+        if await check_request_disconnected(fastapi_request):
+            return {"error": "请求已被中止"}
         
         # 尝试解析提取的数据
         try:
@@ -795,13 +903,28 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         if await check_request_disconnected(fastapi_request):
             return {"error": "请求已被中止"}
         
+        # 图像生成提示词强制使用中文，避免俄语文本导致API错误
+        # 如果角色名称包含非中文字符，使用默认名称
+        safe_character_name = character_name
+        # 检查名称是否包含俄语或其他非中文字符
+        import re
+        if re.search(r'[а-яА-Я]', character_name):  # 检测俄语字符
+            safe_character_name = "角色"
+            print(f"[角色生成] 检测到俄语名称，使用默认名称: {safe_character_name}")
+        
+        # 简化提示词，提高生成成功率
         image_gen_prompt = f"""
-        全身肖像，{character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
+        全身肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
         发色：{character_data.get('hair_color', '未知')}，瞳色：{character_data.get('eye_color', '未知')}，
-        职业：{character_data.get('profession', '未知')}，性格：{character_data.get('personality', '未知')}，
-        {character_data.get('nationality', '未知')}风格，高清，艺术插画，背景虚化
+        职业：{character_data.get('profession', '未知')}，{character_data.get('nationality', '未知')}风格
         """
         image_path = call_tti_api(image_gen_prompt)
+        
+        # 如果图像生成失败，尝试使用更简单的提示词
+        if not image_path:
+            print("[角色生成] 第一次图像生成失败，尝试简化提示词...")
+            simple_prompt = f"角色肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('profession', '未知')}"
+            image_path = call_tti_api(simple_prompt)
         
         # 检查请求是否中止
         if await check_request_disconnected(fastapi_request):
@@ -817,7 +940,7 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         if await check_request_disconnected(fastapi_request):
             return {"error": "请求已被中止"}
         
-        pdf_path = generate_character_pdf(character_data, image_path)
+        pdf_path = generate_character_pdf(character_data, image_path, simple_request.language)
         
         return {
             "character": character_data,
@@ -864,8 +987,17 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
 
         # 3. 生成角色图片
         # 优化提示词，使其更适合图像生成
+        # 图像生成提示词强制使用中文，避免俄语文本导致API错误
+        # 如果角色名称包含非中文字符，使用默认名称
+        safe_character_name = character_name
+        # 检查名称是否包含俄语或其他非中文字符
+        import re
+        if re.search(r'[а-яА-Я]', character_name):  # 检测俄语字符
+            safe_character_name = "角色"
+            print(f"[角色生成] 检测到俄语名称，使用默认名称: {safe_character_name}")
+        
         image_gen_prompt = f"""
-        全身肖像，{character_name}，{request.gender}，{request.age}，
+        全身肖像，{safe_character_name}，{request.gender}，{request.age}，
         发色：{request.hair_color}，瞳色：{request.eye_color}，
         职业：{request.profession}，性格：{request.personality}，
         {request.nationality}风格，高清，艺术插画，背景虚化
@@ -877,6 +1009,12 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
             return {"error": "请求已被中止"}
         
         image_path = call_tti_api(image_gen_prompt)
+        
+        # 如果图像生成失败，尝试使用更简单的提示词
+        if not image_path:
+            print("[角色生成] 第一次图像生成失败，尝试简化提示词...")
+            simple_prompt = f"角色肖像，{safe_character_name}，{request.gender}，{request.profession}"
+            image_path = call_tti_api(simple_prompt)
         
         # 检查请求是否中止
         if await check_request_disconnected(fastapi_request):
@@ -911,7 +1049,7 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         if await check_request_disconnected(fastapi_request):
             return {"error": "请求已被中止"}
         
-        pdf_path = generate_character_pdf(character_data, image_path)
+        pdf_path = generate_character_pdf(character_data, image_path, request.language)
         
         return {
             "character": character_data,

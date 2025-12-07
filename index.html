@@ -2,19 +2,19 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>创意写作助手 - AI聊天机器人</title>
+    <title id="pageTitle">创意写作助手 - AI聊天机器人</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-controls">
-                <button class="chat-control-btn" onclick="newConversation()" id="newChatBtn">新建对话</button>
-                <button class="chat-control-btn" onclick="clearConversation()" id="clearChatBtn">清空对话</button>
-                <button class="chat-control-btn save-chat-btn" onclick="saveChatHistory()" id="saveChatBtn">保存聊天记录</button>
+                <button class="chat-control-btn" onclick="newConversation()" id="newChatBtn"></button>
+                <button class="chat-control-btn" onclick="clearConversation()" id="clearChatBtn"></button>
+                <button class="chat-control-btn save-chat-btn" onclick="saveChatHistory()" id="saveChatBtn"></button>
             </div>
-            <h1 id="title">创意写作助手</h1>
-            <p id="subtitle">AI聊天机器人 - 为作家和编剧提供创意支持</p>
+            <h1 id="title"></h1>
+            <p id="subtitle"></p>
             <div class="language-switch">
                 <select id="lang" onchange="switchLanguage()">
                     <option value="zh">中文</option>
@@ -22,7 +22,7 @@
                 </select>
             </div>
             <div class="sidebar-toggle">
-                <button class="chat-control-btn" onclick="toggleSidebar()" id="sidebarToggleBtn">自定义角色生成</button>
+                <button class="chat-control-btn" onclick="toggleSidebar()" id="sidebarToggleBtn"></button>
             </div>
         </div>
         
@@ -38,24 +38,16 @@
                 
                 <div class="chat-messages" id="chatMessages">
                     <div class="message bot">
-                        <div class="message-content">
-                            <strong>🤖 创意写作助手</strong><br>
-                            <span id="welcomeMessage">您好！我是您的创意写作助手，我可以帮助您：</span>
-                            <ul style="margin-top: 10px; padding-left: 20px;">
-                                <li>💬 聊天交流创意想法</li>
-                                <li>👤 生成角色姓名和完整档案</li>
-                                <li>📚 根据描述生成书名，或根据书名生成描述</li>
-                                <li>🖼️ 生成角色图片并导出PDF档案</li>
-                            </ul>
-                            <div class="command-hint">试试说："生成一个俄罗斯骑士的角色" 或 "帮我起一个精灵的名字"</div>
+                        <div class="message-content" id="welcomeContent">
+                            <!-- 欢迎消息将通过JavaScript动态生成 -->
                         </div>
                     </div>
                 </div>
                 
                 <div class="chat-input">
-                    <input type="text" id="messageInput" placeholder="输入您的消息..." onkeypress="handleKeyPress(event)">
-                    <button onclick="sendMessage()" id="sendBtn">发送</button>
-                    <button onclick="stopGeneration()" id="stopBtn" class="stop-btn">停止</button>
+                    <input type="text" id="messageInput" placeholder="" onkeypress="handleKeyPress(event)">
+                    <button onclick="sendMessage()" id="sendBtn"></button>
+                    <button onclick="stopGeneration()" id="stopBtn" class="stop-btn"></button>
                 </div>
             </div>
             
