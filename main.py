@@ -473,7 +473,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
             leading=12,
             encoding='utf-8'
         )
-        description = character_data['description'][:500] + "..." if len(character_data['description']) > 500 else character_data['description']
+        description = character_data['description']
         story.append(Paragraph(description, desc_style))
 
     # 构建PDF文档

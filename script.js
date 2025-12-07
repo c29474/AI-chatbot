@@ -463,13 +463,13 @@ async function generateCustomCharacter() {
                 return;
             }
             
-            let resultText = currentLanguage === 'zh' ?
-                `🎨 <strong>角色生成成功！</strong><br>
-                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                 📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>` :
-                `🎨 <strong>Персонаж создан успешно！</strong><br>
-                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                 📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>`;
+                    let resultText = currentLanguage === 'zh' ?
+                        `🎨 <strong>角色生成成功！</strong><br>
+                         👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                        `🎨 <strong>Персонаж создан успешно！</strong><br>
+                         👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
@@ -627,10 +627,10 @@ async function generateCharacterFromPreset(presetKey) {
             let resultText = currentLanguage === 'zh' ?
                 `🎨 <strong>角色生成成功！</strong><br>
                  👤 <strong>姓名：</strong>${character.name}<br>
-                 📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>` :
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
                 `🎨 <strong>Персонаж создан успешно！</strong><br>
                  👤 <strong>Имя：</strong>${character.name}<br>
-                 📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>`;
+                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
@@ -881,11 +881,11 @@ async function sendMessage() {
                     let resultText = currentLanguage === 'zh' ?
                         `🎨 <strong>角色生成成功！</strong><br>
                          👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                         📝 <strong>描述：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>
                          <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
                         `🎨 <strong>Персонаж создан успешно！</strong><br>
                          👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                         📝 <strong>Описание：</strong>${character.description ? character.description.substring(0, 200) + '...' : '无描述'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>
                          <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
                     
                     addMessage(resultText);
