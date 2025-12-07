@@ -480,6 +480,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
             alignment=4,  # 两端对齐
             wordWrap=True  # 自动换行
         )
+<<<<<<< HEAD
         
         # 对描述文本进行格式化处理
         description = character_data['description']
@@ -569,6 +570,10 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str]) -> s
                     story.append(Spacer(1, 4))
                 story.append(Paragraph(para, desc_style))
                 story.append(Spacer(1, 8))
+=======
+        description = character_data['description']
+        story.append(Paragraph(description, desc_style))
+>>>>>>> 5e2e3a28b9ce180e5ed882ba0e851c5eb1e1ab81
 
     # 构建PDF文档
     try:
