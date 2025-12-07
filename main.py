@@ -1,7 +1,7 @@
 # main.py - 后端核心服务 (完整修正版)
 import os
 import uuid
-import json
+import json 
 import requests
 import hashlib
 import hmac
@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
 import websocket
 import threading
 from reportlab.lib.pagesizes import A4
@@ -77,6 +77,10 @@ class BookTitleGenRequest(BaseModel):
     description: Optional[str] = None
     title: Optional[str] = None
     genre: Optional[str] = None
+    language: str = "zh"
+
+class SimpleCharacterRequest(BaseModel):
+    description: str
     language: str = "zh"
 
 # ==================== 核心工具函数 ====================
@@ -523,82 +527,243 @@ async def health_check():
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
-    system_prompt = "你是一个专业的创意写作助手，专门帮助作家和编剧。请根据用户请求提供有帮助、有创意的回答。"
-    messages = build_spark_text_prompt(request.message, system_prompt, request.language)
-    response = get_spark_text_response(messages)
-    return {"response": response, "session_id": request.session_id or str(uuid.uuid4())}
+    try:
+        print(f"[聊天] 收到聊天请求: {request.message[:50]}... (语言: {request.language})")
+        system_prompt = "你是一个专业的创意写作助手，专门帮助作家和编剧。请根据用户请求提供有帮助、有创意的回答。"
+        messages = build_spark_text_prompt(request.message, system_prompt, request.language)
+        print(f"[聊天] 构建的提示词: {messages}")
+        
+        response = get_spark_text_response(messages)
+        print(f"[聊天] AI响应: {response[:100]}...")
+        
+        if not response:
+            print("[聊天] 警告: 收到空响应")
+            response = "抱歉，我暂时无法回答这个问题。请尝试重新提问或检查网络连接。"
+        
+        return {"response": response, "session_id": request.session_id or str(uuid.uuid4())}
+    except Exception as e:
+        print(f"[聊天] 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"response": f"抱歉，聊天功能暂时不可用。错误: {str(e)}", "session_id": request.session_id or str(uuid.uuid4())}
+
+class SimpleCharacterRequest(BaseModel):
+    description: str
+    language: str = "zh"
 
 @app.post("/api/generate/character")
-async def generate_character(request: CharacterGenRequest):
-    print(f"[角色生成] 开始处理请求: {request.nationality} {request.profession}")
+async def generate_character(request: Union[CharacterGenRequest, SimpleCharacterRequest]):
+    # 支持两种请求格式：完整的角色属性或简单的描述文本
+    if hasattr(request, 'description') and not hasattr(request, 'gender'):
+        # 处理简单描述格式
+        simple_request = request
+        print(f"[角色生成] 处理简单描述请求: {simple_request.description[:50]}...")
+        
+        # 使用AI从描述中提取角色属性
+        extract_prompt = f"""
+        请从以下角色描述中提取关键属性，并以JSON格式返回：
+        {simple_request.description}
+        
+        需要提取的属性：
+        - gender: 性别（男/女）
+        - age: 年龄（如：25岁）
+        - height: 身高（如：175cm）
+        - weight: 体重（如：65kg）
+        - hair_color: 发色
+        - eye_color: 瞳色
+        - profession: 职业
+        - personality: 性格特点
+        - nationality: 国籍/地区
+        - fantasy_race: 奇幻种族（如：人类、精灵、矮人等，如果没有则留空）
+        
+        只返回JSON格式，不要其他内容。
+        """
+        
+        extract_messages = build_spark_text_prompt(extract_prompt, "你是一个角色属性提取器。", simple_request.language)
+        extracted_data = get_spark_text_response(extract_messages)
+        
+        # 尝试解析提取的数据
+        try:
+            import re
+            # 尝试从响应中提取JSON
+            json_match = re.search(r'\{.*\}', extracted_data, re.DOTALL)
+            if json_match:
+                extracted_json = json.loads(json_match.group())
+                # 使用提取的属性创建角色数据
+                character_data = {
+                    "name": "未知角色",
+                    "description": simple_request.description,
+                    "gender": extracted_json.get('gender', '未知'),
+                    "age": extracted_json.get('age', '未知'),
+                    "height": extracted_json.get('height', '未知'),
+                    "weight": extracted_json.get('weight', '未知'),
+                    "hair_color": extracted_json.get('hair_color', '未知'),
+                    "eye_color": extracted_json.get('eye_color', '未知'),
+                    "profession": extracted_json.get('profession', '未知'),
+                    "personality": extracted_json.get('personality', '未知'),
+                    "nationality": extracted_json.get('nationality', '未知'),
+                    "fantasy_race": extracted_json.get('fantasy_race', ''),
+                    "generated_at": datetime.now().isoformat()
+                }
+            else:
+                # 如果无法解析JSON，使用默认值
+                character_data = {
+                    "name": "未知角色",
+                    "description": simple_request.description,
+                    "gender": "未知",
+                    "age": "未知",
+                    "height": "未知",
+                    "weight": "未知",
+                    "hair_color": "未知",
+                    "eye_color": "未知",
+                    "profession": "未知",
+                    "personality": "未知",
+                    "nationality": "未知",
+                    "fantasy_race": "",
+                    "generated_at": datetime.now().isoformat()
+                }
+        except:
+            # 如果解析失败，使用默认值
+            character_data = {
+                "name": "未知角色",
+                "description": simple_request.description,
+                "gender": "未知",
+                "age": "未知",
+                "height": "未知",
+                "weight": "未知",
+                "hair_color": "未知",
+                "eye_color": "未知",
+                "profession": "未知",
+                "personality": "未知",
+                "nationality": "未知",
+                "fantasy_race": "",
+                "generated_at": datetime.now().isoformat()
+            }
+        
+        # 1. 生成详细的角色描述文本（像完整格式那样）
+        description_prompt = f"""
+        请创建一个详细角色描述，包含以下信息：
+        - 一个符合{character_data.get('nationality', '未知')}文化的姓名（姓和名）
+        - 一段生动的外貌和性格描写
+        - 符合其职业和性格的背景故事片段
+        具体参数：
+        性别：{character_data.get('gender', '未知')}， 年龄：{character_data.get('age', '未知')}， 身高：{character_data.get('height', '未知')}， 体重：{character_data.get('weight', '未知')}，
+        发色：{character_data.get('hair_color', '未知')}， 瞳色：{character_data.get('eye_color', '未知')}， 职业：{character_data.get('profession', '未知')}，
+        性格：{character_data.get('personality', '未知')}， 奇幻种族：{character_data.get('fantasy_race', '人类')}。
+        """
+        description_messages = build_spark_text_prompt(description_prompt, "你是一个角色设计师。", simple_request.language)
+        character_description = get_spark_text_response(description_messages)
+        
+        if not character_description:
+            character_description = simple_request.description  # 如果生成失败，使用原始描述
+        
+        # 2. 提取姓名
+        name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
+        name_messages = build_spark_text_prompt(name_prompt, "", simple_request.language)
+        character_name = get_spark_text_response(name_messages).strip()
+        
+        if not character_name:
+            character_name = "未知角色"
+        
+        # 更新角色数据
+        character_data["name"] = character_name
+        character_data["description"] = character_description
+        
+        # 3. 生成角色图片
+        print(f"[角色生成] 尝试为简单描述生成图片...")
+        image_gen_prompt = f"""
+        全身肖像，{character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
+        发色：{character_data.get('hair_color', '未知')}，瞳色：{character_data.get('eye_color', '未知')}，
+        职业：{character_data.get('profession', '未知')}，性格：{character_data.get('personality', '未知')}，
+        {character_data.get('nationality', '未知')}风格，高清，艺术插画，背景虚化
+        """
+        image_path = call_tti_api(image_gen_prompt)
+        
+        if image_path:
+            print(f"[角色生成] 图片生成成功: {image_path}")
+        else:
+            print(f"[角色生成] 图片生成失败，将继续生成PDF")
+        
+        # 4. 生成PDF
+        pdf_path = generate_character_pdf(character_data, image_path)
+        
+        return {
+            "character": character_data,
+            "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
+            "pdf_url": f"/file/{os.path.basename(pdf_path)}"
+        }
     
-    # 1. 生成角色描述文本
-    prompt = f"""
-    请创建一个详细角色描述，包含以下信息：
-    - 一个符合{request.nationality}文化的姓名（姓和名）
-    - 一段生动的外貌和性格描写
-    - 符合其职业和性格的背景故事片段
-    具体参数：
-    性别：{request.gender}， 年龄：{request.age}， 身高：{request.height}， 体重：{request.weight}，
-    发色：{request.hair_color}， 瞳色：{request.eye_color}， 职业：{request.profession}，
-    性格：{request.personality}， 奇幻种族：{request.fantasy_race if request.fantasy_race else '人类'}。
-    """
-    messages = build_spark_text_prompt(prompt, "你是一个角色设计师。", request.language)
-    character_description = get_spark_text_response(messages)
-    
-    if not character_description:
-        raise HTTPException(status_code=500, detail="生成角色描述失败")
-
-    # 2. 提取姓名
-    name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
-    name_messages = build_spark_text_prompt(name_prompt, "", request.language)
-    character_name = get_spark_text_response(name_messages).strip()
-    
-    if not character_name:
-        character_name = "未知角色"
-
-    # 3. 生成角色图片
-    # 优化提示词，使其更适合图像生成
-    image_gen_prompt = f"""
-    全身肖像，{character_name}，{request.gender}，{request.age}，
-    发色：{request.hair_color}，瞳色：{request.eye_color}，
-    职业：{request.profession}，性格：{request.personality}，
-    {request.nationality}风格，高清，艺术插画，背景虚化
-    """
-    print(f"[角色生成] 开始生成图片...")
-    image_path = call_tti_api(image_gen_prompt)
-    
-    if image_path:
-        print(f"[角色生成] 图片生成成功: {image_path}")
     else:
-        print(f"[角色生成] 图片生成失败，将继续生成PDF")
+        # 处理完整的角色属性格式（原有逻辑）
+        print(f"[角色生成] 开始处理请求: {request.nationality} {request.profession}")
+        
+        # 1. 生成角色描述文本
+        prompt = f"""
+        请创建一个详细角色描述，包含以下信息：
+        - 一个符合{request.nationality}文化的姓名（姓和名）
+        - 一段生动的外貌和性格描写
+        - 符合其职业和性格的背景故事片段
+        具体参数：
+        性别：{request.gender}， 年龄：{request.age}， 身高：{request.height}， 体重：{request.weight}，
+        发色：{request.hair_color}， 瞳色：{request.eye_color}， 职业：{request.profession}，
+        性格：{request.personality}， 奇幻种族：{request.fantasy_race if request.fantasy_race else '人类'}。
+        """
+        messages = build_spark_text_prompt(prompt, "你是一个角色设计师。", request.language)
+        character_description = get_spark_text_response(messages)
+        
+        if not character_description:
+            raise HTTPException(status_code=500, detail="生成角色描述失败")
 
-    # 4. 组装角色数据
-    character_data = {
-        "name": character_name,
-        "description": character_description,
-        "gender": request.gender,
-        "age": request.age,
-        "height": request.height,
-        "weight": request.weight,
-        "hair_color": request.hair_color,
-        "eye_color": request.eye_color,
-        "profession": request.profession,
-        "personality": request.personality,
-        "nationality": request.nationality,
-        "fantasy_race": request.fantasy_race,
-        "generated_at": datetime.now().isoformat()
-    }
+        # 2. 提取姓名
+        name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
+        name_messages = build_spark_text_prompt(name_prompt, "", request.language)
+        character_name = get_spark_text_response(name_messages).strip()
+        
+        if not character_name:
+            character_name = "未知角色"
 
-    # 5. 生成PDF
-    print(f"[角色生成] 开始生成PDF...")
-    pdf_path = generate_character_pdf(character_data, image_path)
-    
-    return {
-        "character": character_data,
-        "image_url": f"/api/file/{os.path.basename(image_path)}" if image_path else None,
-        "pdf_url": f"/api/file/{os.path.basename(pdf_path)}"
-    }
+        # 3. 生成角色图片
+        # 优化提示词，使其更适合图像生成
+        image_gen_prompt = f"""
+        全身肖像，{character_name}，{request.gender}，{request.age}，
+        发色：{request.hair_color}，瞳色：{request.eye_color}，
+        职业：{request.profession}，性格：{request.personality}，
+        {request.nationality}风格，高清，艺术插画，背景虚化
+        """
+        print(f"[角色生成] 开始生成图片...")
+        image_path = call_tti_api(image_gen_prompt)
+        
+        if image_path:
+            print(f"[角色生成] 图片生成成功: {image_path}")
+        else:
+            print(f"[角色生成] 图片生成失败，将继续生成PDF")
+
+        # 4. 组装角色数据
+        character_data = {
+            "name": character_name,
+            "description": character_description,
+            "gender": request.gender,
+            "age": request.age,
+            "height": request.height,
+            "weight": request.weight,
+            "hair_color": request.hair_color,
+            "eye_color": request.eye_color,
+            "profession": request.profession,
+            "personality": request.personality,
+            "nationality": request.nationality,
+            "fantasy_race": request.fantasy_race,
+            "generated_at": datetime.now().isoformat()
+        }
+
+        # 5. 生成PDF
+        print(f"[角色生成] 开始生成PDF...")
+        pdf_path = generate_character_pdf(character_data, image_path)
+        
+        return {
+            "character": character_data,
+            "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
+            "pdf_url": f"/file/{os.path.basename(pdf_path)}"
+        }
 
 @app.post("/api/generate/booktitle")
 async def generate_book_title(request: BookTitleGenRequest):
@@ -642,7 +807,7 @@ async def generate_name(nationality: str, fantasy_type: Optional[str] = None, la
         "full_response": result
     }
 
-@app.get("/api/file/{filename}")
+@app.get("/file/{filename}")
 async def get_file(filename: str):
     file_path = os.path.join(TEMP_FILE_DIR, filename)
     if os.path.exists(file_path):
@@ -657,4 +822,4 @@ if __name__ == "__main__":
     print(f"临时文件目录: {TEMP_FILE_DIR}")
     print("=" * 50)
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

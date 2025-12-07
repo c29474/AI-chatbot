@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = 'http://localhost:8001/api';
 let currentLanguage = 'zh';
 let messageHistory = [];
 
@@ -720,15 +720,54 @@ function parseCommand(message) {
     if (lowerMessage.includes('姓名') || lowerMessage.includes('名字') || 
         lowerMessage.includes('имя') || lowerMessage.includes('generate name')) {
         return 'name';
-    } else if (lowerMessage.includes('角色') || lowerMessage.includes('人物') || 
-               lowerMessage.includes('персонаж') || lowerMessage.includes('character')) {
-        return 'character';
     } else if (lowerMessage.includes('书名') || lowerMessage.includes('标题') || 
                lowerMessage.includes('название') || lowerMessage.includes('book')) {
         return 'book';
+    } else if (isCharacterDescription(message)) {
+        return 'character';
     } else {
         return 'chat';
     }
+}
+
+// 智能判断是否为角色描述
+function isCharacterDescription(message) {
+    const lowerMessage = message.toLowerCase();
+    
+    // 检查文本长度（角色描述通常比较详细）
+    if (message.length < 20) {
+        return false;
+    }
+    
+    // 检查是否包含角色特征关键词
+    const characterKeywords = [
+        // 性别相关
+        '男', '女', '男性', '女性', '性别', 'мужчин', 'женщин', 'пол',
+        // 年龄相关
+        '岁', '年龄', '年', 'возраст', 'лет',
+        // 外貌特征
+        '身高', '体重', '发色', '瞳色', '眼睛', '头发', '外表', '外貌',
+        'рост', 'вес', 'волос', 'глаз', 'внешность',
+        // 职业
+        '骑士', '巫师', '武士', '弓箭手', '铁匠', '战士', '法师', '盗贼',
+        'рыцарь', 'волшебник', 'воин', 'лучник', 'кузнец', 'воин', 'маг', 'вор',
+        // 性格
+        '勇敢', '忠诚', '智慧', '神秘', '温和', '优雅', '敏捷', '坚韧', '诚实',
+        'храбрый', 'верный', 'мудрый', 'таинственный', 'мягкий', 'элегантный', 'проворный', 'стойкий', 'честный',
+        // 种族
+        '人类', '精灵', '矮人', '兽人', '龙族', 'человек', 'эльф', 'гном', 'орк', 'дракон'
+    ];
+    
+    // 计算关键词匹配数量
+    let keywordCount = 0;
+    characterKeywords.forEach(keyword => {
+        if (lowerMessage.includes(keyword.toLowerCase())) {
+            keywordCount++;
+        }
+    });
+    
+    // 如果匹配到足够多的关键词，认为是角色描述
+    return keywordCount >= 2;
 }
 
 // 提取参数函数
@@ -793,19 +832,11 @@ async function sendMessage() {
                 break;
                 
             case 'character':
-                if (params.preset) {
-                    const preset = presets[params.preset];
-                    response = await callApi('generate/character', 'POST', {
-                        ...preset,
-                        language: currentLanguage
-                    });
-                } else {
-                    // 使用默认预设
-                    response = await callApi('generate/character', 'POST', {
-                        ...presets.chinese_warrior,
-                        language: currentLanguage
-                    });
-                }
+                // 智能识别的角色描述，直接使用用户输入作为描述
+                response = await callApi('generate/character', 'POST', {
+                    description: message,
+                    language: currentLanguage
+                });
                 
                 if (response.error) {
                     addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
@@ -837,6 +868,8 @@ async function sendMessage() {
                     }
                 }
                 break;
+                
+
                 
             case 'book':
                 // 简单的书名生成逻辑
