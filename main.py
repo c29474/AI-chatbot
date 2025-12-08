@@ -460,8 +460,6 @@ def call_tti_api(prompt: str) -> Optional[str]:
 
 def generate_character_pdf(character_data: dict, image_path: Optional[str], language: str = "zh") -> str:
     pdf_filename = f"{TEMP_FILE_DIR}/{uuid.uuid4()}.pdf"
-    doc = SimpleDocTemplate(pdf_filename, pagesize=A4)
-    story = []
     
     # 双语文本配置
     pdf_translations = {
@@ -505,88 +503,101 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     
     t = pdf_translations.get(language, pdf_translations["zh"])
     
-    # 创建支持多语言的样式
+    # 改进的字体注册和选择逻辑
+    def setup_pdf_fonts(language):
+        """设置支持多语言的PDF字体"""
+        available_fonts = []
+        selected_font = 'Helvetica'
+        
+        try:
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            
+            # 扩展字体路径，包含更多Unicode字体选项
+            font_paths = {
+                # 中文支持字体
+                'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
+                'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
+                'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
+                'FangSong': 'C:\\Windows\\Fonts\\simfang.ttf',  # 仿宋
+                'KaiTi': 'C:\\Windows\\Fonts\\simkai.ttf',  # 楷体
+                
+                # 俄语支持字体
+                'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+                'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
+                'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
+                'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
+                'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
+                'Tahoma': 'C:\\Windows\\Fonts\\tahoma.ttf',
+                
+                # 通用Unicode字体
+                'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',
+            }
+            
+            # 尝试注册所有可用字体
+            for font_name, font_path in font_paths.items():
+                if os.path.exists(font_path):
+                    try:
+                        pdfmetrics.registerFont(TTFont(font_name, font_path))
+                        available_fonts.append(font_name)
+                        print(f"[PDF生成] 成功注册字体: {font_name}")
+                    except Exception as e:
+                        print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
+                        continue
+            
+            # 根据语言选择最佳字体
+            if language == "ru":
+                # 俄语字体优先级
+                russian_priority = [
+                    'Times New Roman', 'Arial', 'Calibri', 'Cambria', 
+                    'Arial Unicode MS', 'Tahoma', 'DejaVu Sans'
+                ]
+                for font in russian_priority:
+                    if font in available_fonts:
+                        selected_font = font
+                        break
+            else:
+                # 中文和其他语言字体优先级
+                chinese_priority = [
+                    'Microsoft YaHei', 'SimHei', 'SimSun', 
+                    'Arial Unicode MS', 'DejaVu Sans', 'Times New Roman'
+                ]
+                for font in chinese_priority:
+                    if font in available_fonts:
+                        selected_font = font
+                        break
+            
+            print(f"[PDF生成] 最终选择字体: {selected_font} (语言: {language})")
+            
+        except ImportError:
+            print("[PDF生成] 无法导入字体模块，使用默认字体")
+        except Exception as e:
+            print(f"[PDF生成] 字体设置错误: {e}")
+        
+        return selected_font, available_fonts
+    
+    # 设置字体
+    selected_font, available_fonts = setup_pdf_fonts(language)
+    
+    # 创建支持多语言的样式 - 改进编码设置
     styles = getSampleStyleSheet()
     
-    # 使用更可靠的多语言字体方案
-    # 尝试使用支持Unicode的字体，优先使用系统字体
-    unicode_fonts = [
-        'Times New Roman',    # 新罗马字体，特别适合俄语
-        'Arial Unicode MS',   # 支持中文、英文、俄语
-        'DejaVu Sans',        # 开源Unicode字体
-        'SimSun',             # 宋体
-        'SimHei',             # 黑体
-        'Microsoft YaHei',    # 微软雅黑
-        'Helvetica'           # 默认字体
-    ]
+    # 确保文本编码正确
+    def safe_text(text):
+        """确保文本编码正确，处理可能的编码问题"""
+        if text is None:
+            return ""
+        try:
+            # 如果是字节字符串，解码为Unicode
+            if isinstance(text, bytes):
+                return text.decode('utf-8', errors='ignore')
+            # 确保是字符串类型
+            return str(text)
+        except Exception as e:
+            print(f"[PDF生成] 文本编码处理错误: {e}")
+            return str(text) if text else ""
     
-    # 检查并注册可用的字体
-    available_fonts = []
-    try:
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        
-        # 常见字体路径 - 确保支持俄语字符
-        font_paths = {
-            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',  # 支持俄语
-            'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',  # 支持俄语
-            'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',  # 开源Unicode字体
-            'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
-            'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
-            'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
-        }
-        
-        # 添加更多俄语支持字体
-        russian_font_paths = {
-            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
-            'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
-            'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
-            'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
-        }
-        
-        # 合并字体路径
-        font_paths.update(russian_font_paths)
-        
-        for font_name, font_path in font_paths.items():
-            if os.path.exists(font_path):
-                try:
-                    pdfmetrics.registerFont(TTFont(font_name, font_path))
-                    available_fonts.append(font_name)
-                    print(f"[PDF生成] 成功注册字体: {font_name}")
-                except Exception as e:
-                    print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
-                    continue
-    except ImportError:
-        print("[PDF生成] 无法导入字体模块")
-    
-    # 选择最佳字体 - 根据语言优先选择
-    selected_font = 'Helvetica'  # 默认字体
-    
-    # 俄语文档优先使用支持俄语的字体
-    if language == "ru":
-        # 俄语字体优先级
-        russian_fonts = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Arial Unicode MS', 'DejaVu Sans']
-        for font in russian_fonts:
-            if font in available_fonts:
-                selected_font = font
-                print(f"[PDF生成] 俄语文档，使用字体: {selected_font}")
-                break
-        else:
-            # 如果没有找到俄语字体，使用默认字体
-            for font in unicode_fonts:
-                if font in available_fonts:
-                    selected_font = font
-                    print(f"[PDF生成] 使用字体: {selected_font}")
-                    break
-    else:
-        # 其他语言按优先级选择
-        for font in unicode_fonts:
-            if font in available_fonts:
-                selected_font = font
-                print(f"[PDF生成] 使用字体: {selected_font}")
-                break
-    
-    # 创建支持多语言的样式 - 确保编码正确
+    # 创建样式
     title_style = ParagraphStyle(
         'CustomTitle',
         fontName=selected_font,
@@ -611,11 +622,25 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         encoding='utf-8'
     )
 
+    # 使用safe_text处理所有文本内容
+    def safe_paragraph(text, style):
+        """安全创建段落，处理编码问题"""
+        try:
+            return Paragraph(safe_text(text), style)
+        except Exception as e:
+            print(f"[PDF生成] 创建段落失败: {e}")
+            # 如果失败，尝试使用纯文本
+            return Paragraph(safe_text(str(text)), style)
+    
+    # 创建文档模板和故事流
+    doc = SimpleDocTemplate(pdf_filename, pagesize=A4)
+    story = []
+    
     # 根据语言生成标题
-    title_text = f"{t['title']}: {character_data.get('name', '未知角色')}"
-    story.append(Paragraph(title_text, title_style))
+    title_text = f"{safe_text(t['title'])}: {safe_text(character_data.get('name', '未知角色'))}"
+    story.append(safe_paragraph(title_text, title_style))
     story.append(Spacer(1, 12))
-
+    
     if image_path and os.path.exists(image_path):
         try:
             # 读取图片原始尺寸并保持比例
@@ -658,26 +683,26 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         except Exception as e:
             print(f"[PDF生成] 处理图片时出错: {e}")
 
-    # 生成多语言详情
+    # 生成多语言详情 - 使用safe_text处理所有文本
     details = [
-        f"{t['gender']}: {character_data.get('gender', '')}",
-        f"{t['age']}: {character_data.get('age', '')}",
-        f"{t['height_weight']}: {character_data.get('height', '')} / {character_data.get('weight', '')}",
-        f"{t['hair_eyes']}: {character_data.get('hair_color', '')} / {character_data.get('eye_color', '')}",
-        f"{t['profession']}: {character_data.get('profession', '')}",
-        f"{t['personality']}: {character_data.get('personality', '')}",
-        f"{t['nationality']}: {character_data.get('nationality', '')}",
-        f"{t['fantasy_race']}: {character_data.get('fantasy_race', '') if character_data.get('fantasy_race') else ''}",
-        f"{t['generated_time']}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        f"{safe_text(t['gender'])}: {safe_text(character_data.get('gender', ''))}",
+        f"{safe_text(t['age'])}: {safe_text(character_data.get('age', ''))}",
+        f"{safe_text(t['height_weight'])}: {safe_text(character_data.get('height', ''))} / {safe_text(character_data.get('weight', ''))}",
+        f"{safe_text(t['hair_eyes'])}: {safe_text(character_data.get('hair_color', ''))} / {safe_text(character_data.get('eye_color', ''))}",
+        f"{safe_text(t['profession'])}: {safe_text(character_data.get('profession', ''))}",
+        f"{safe_text(t['personality'])}: {safe_text(character_data.get('personality', ''))}",
+        f"{safe_text(t['nationality'])}: {safe_text(character_data.get('nationality', ''))}",
+        f"{safe_text(t['fantasy_race'])}: {safe_text(character_data.get('fantasy_race', '')) if character_data.get('fantasy_race') else ''}",
+        f"{safe_text(t['generated_time'])}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     ]
     
     for detail in details:
-        story.append(Paragraph(detail, body_style))
+        story.append(safe_paragraph(detail, body_style))
         story.append(Spacer(1, 6))
 
     if character_data.get('description'):
         story.append(Spacer(1, 12))
-        story.append(Paragraph(f"{t['description']}:", heading_style))
+        story.append(safe_paragraph(f"{safe_text(t['description'])}:", heading_style))
         story.append(Spacer(1, 6))
         
         # 改进的描述样式 - 更好的可读性
@@ -695,7 +720,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         )
         
         # 对描述文本进行格式化处理
-        description = character_data['description']
+        description = safe_text(character_data['description'])
         
         # 清理Markdown格式标记
         import re
@@ -721,31 +746,31 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         if len(name_sentences) > 0 or len(appearance_sentences) > 0 or len(personality_sentences) > 0 or len(race_sentences) > 0:
             # 按照识别到的结构分段
             if name_sentences:
-                story.append(Paragraph(f"▪️ {t['name_info']}", heading_style))
+                story.append(safe_paragraph(f"▪️ {safe_text(t['name_info'])}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in name_sentences:
-                    story.append(Paragraph(sentence[0], desc_style))
+                    story.append(safe_paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if appearance_sentences:
-                story.append(Paragraph(f"▪️ {t['appearance']}", heading_style))
+                story.append(safe_paragraph(f"▪️ {safe_text(t['appearance'])}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in appearance_sentences:
-                    story.append(Paragraph(sentence[0], desc_style))
+                    story.append(safe_paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if personality_sentences:
-                story.append(Paragraph(f"▪️ {t['personality']}", heading_style))
+                story.append(safe_paragraph(f"▪️ {safe_text(t['personality'])}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in personality_sentences:
-                    story.append(Paragraph(sentence[0], desc_style))
+                    story.append(safe_paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             if race_sentences:
-                story.append(Paragraph(f"▪️ {t['race']}", heading_style))
+                story.append(safe_paragraph(f"▪️ {safe_text(t['race'])}", heading_style))
                 story.append(Spacer(1, 4))
                 for sentence in race_sentences:
-                    story.append(Paragraph(sentence[0], desc_style))
+                    story.append(safe_paragraph(sentence[0], desc_style))
                 story.append(Spacer(1, 8))
             
             # 添加剩余的描述内容（如果有）
@@ -755,9 +780,9 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
                     remaining_text = remaining_text.replace(sentence[0], '', 1)
             
             if remaining_text.strip():
-                story.append(Paragraph(f"▪️ {t['background']}", heading_style))
+                story.append(safe_paragraph(f"▪️ {safe_text(t['background'])}", heading_style))
                 story.append(Spacer(1, 4))
-                story.append(Paragraph(remaining_text.strip(), desc_style))
+                story.append(safe_paragraph(remaining_text.strip(), desc_style))
         else:
             # 如果无法识别结构，使用智能分段
             sentences = re.split(r'[。！？.!?]', description)
@@ -780,10 +805,11 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             # 添加格式化后的段落
             for i, para in enumerate(paragraphs):
                 if i == 0:
-                    story.append(Paragraph(f"▪️ {t['introduction']}", heading_style))
+                    story.append(safe_paragraph(f"▪️ {safe_text(t['introduction'])}", heading_style))
                     story.append(Spacer(1, 4))
-                story.append(Paragraph(para, desc_style))
+                story.append(safe_paragraph(para, desc_style))
                 story.append(Spacer(1, 8))
+
 
     # 构建PDF文档
     try:
@@ -792,22 +818,110 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         return pdf_filename
     except Exception as e:
         print(f"[PDF生成] 构建PDF失败: {e}")
-        # 如果失败，尝试使用默认字体重新构建
+        # 如果失败，尝试使用改进的备用方案
         try:
-            print("[PDF生成] 尝试使用默认字体重新构建...")
-            # 重新创建简单的PDF
-            from reportlab.pdfgen import canvas
-            c = canvas.Canvas(pdf_filename, pagesize=A4)
-            c.setFont("Helvetica", 12)
-            c.drawString(50, 750, t['title'])
-            c.drawString(50, 730, f"{t['name_info'].replace('角色信息', '姓名')}: {character_data.get('name', '未知角色')}")
-            c.drawString(50, 710, f"{t['gender']}: {character_data.get('gender', '')}")
-            c.drawString(50, 690, f"{t['age']}: {character_data.get('age', '')}")
-            c.save()
-            return pdf_filename
+            print("[PDF生成] 尝试使用改进的备用方案...")
+            return create_fallback_pdf(pdf_filename, character_data, t, selected_font)
         except Exception as fallback_error:
             print(f"[PDF生成] 备用方案也失败: {fallback_error}")
-            raise fallback_error
+            # 创建最简单的文本文件作为最后的手段
+            try:
+                txt_filename = pdf_filename.replace('.pdf', '.txt')
+                with open(txt_filename, 'w', encoding='utf-8') as f:
+                    f.write(f"{t['title']}: {character_data.get('name', '未知角色')}\n")
+                    f.write(f"{t['gender']}: {character_data.get('gender', '')}\n")
+                    f.write(f"{t['age']}: {character_data.get('age', '')}\n")
+                    f.write(f"{t['description']}:\n{character_data.get('description', '')}\n")
+                print(f"[PDF生成] 创建文本文件: {txt_filename}")
+                return txt_filename
+            except Exception as txt_error:
+                print(f"[PDF生成] 创建文本文件也失败: {txt_error}")
+                raise fallback_error
+
+def create_fallback_pdf(filename, character_data, translations, font_name):
+    """创建备用PDF方案，使用更简单的canvas方法"""
+    from reportlab.pdfgen import canvas
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    
+    c = canvas.Canvas(filename, pagesize=A4)
+    
+    # 尝试设置字体
+    try:
+        # 注册字体
+        font_paths = {
+            'Helvetica': None,  # 使用默认字体
+            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+            'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
+        }
+        
+        if font_name in font_paths and font_paths[font_name] and os.path.exists(font_paths[font_name]):
+            pdfmetrics.registerFont(TTFont(font_name, font_paths[font_name]))
+            c.setFont(font_name, 12)
+        else:
+            c.setFont("Helvetica", 12)
+    except:
+        c.setFont("Helvetica", 12)
+    
+    # 设置起始位置
+    y_position = 750
+    
+    # 添加标题
+    c.drawString(50, y_position, f"{translations['title']}: {character_data.get('name', '未知角色')}")
+    y_position -= 20
+    
+    # 添加基本信息
+    details = [
+        f"{translations['gender']}: {character_data.get('gender', '')}",
+        f"{translations['age']}: {character_data.get('age', '')}",
+        f"{translations['height_weight']}: {character_data.get('height', '')} / {character_data.get('weight', '')}",
+        f"{translations['hair_eyes']}: {character_data.get('hair_color', '')} / {character_data.get('eye_color', '')}",
+        f"{translations['profession']}: {character_data.get('profession', '')}",
+        f"{translations['nationality']}: {character_data.get('nationality', '')}",
+    ]
+    
+    for detail in details:
+        if y_position < 50:  # 如果页面空间不足，创建新页面
+            c.showPage()
+            y_position = 750
+            c.setFont("Helvetica", 12)
+        
+        c.drawString(50, y_position, detail)
+        y_position -= 15
+    
+    # 添加描述
+    if character_data.get('description'):
+        if y_position < 100:  # 确保有足够空间
+            c.showPage()
+            y_position = 750
+            c.setFont("Helvetica", 12)
+        
+        c.drawString(50, y_position, f"{translations['description']}:")
+        y_position -= 20
+        
+        # 处理长描述，自动换行
+        description = character_data['description']
+        words = description.split()
+        line = ""
+        for word in words:
+            test_line = line + word + " "
+            if len(test_line) > 80:  # 大约80字符换行
+                c.drawString(50, y_position, line)
+                y_position -= 15
+                line = word + " "
+                if y_position < 50:
+                    c.showPage()
+                    y_position = 750
+                    c.setFont("Helvetica", 12)
+            else:
+                line = test_line
+        
+        if line:
+            c.drawString(50, y_position, line)
+            y_position -= 15
+    
+    c.save()
+    return filename
 
 # ==================== API端点 ====================
 @app.get("/")
