@@ -85,7 +85,89 @@ class SimpleCharacterRequest(BaseModel):
     language: str = "zh"
 
 # ==================== 核心工具函数 ====================
+def detect_mixed_language(text: str) -> dict:
+    """检测文本中的混合语言情况"""
+    import re
+    
+    # 检测俄语字符
+    russian_chars = re.findall(r'[а-яА-ЯёЁ]', text)
+    # 检测中文字符
+    chinese_chars = re.findall(r'[\u4e00-\u9fff]', text)
+    # 检测英语字符
+    english_chars = re.findall(r'[a-zA-Z]', text)
+    
+    return {
+        'has_russian': len(russian_chars) > 0,
+        'has_chinese': len(chinese_chars) > 0,
+        'has_english': len(english_chars) > 0,
+        'russian_count': len(russian_chars),
+        'chinese_count': len(chinese_chars),
+        'english_count': len(english_chars)
+    }
+
+def translate_mixed_language_prompt(user_request: str, target_language: str) -> str:
+    """翻译混合语言提示词为目标语言"""
+    import re
+    
+    # 如果目标语言是俄语，且检测到中文词汇，需要翻译
+    if target_language == "ru":
+        # 常见的中文-俄语词汇映射
+        chinese_russian_map = {
+            '印度': 'Индия',
+            '矮人': 'гном',
+            '医生': 'врач',
+            '男': 'мужчина',
+            '女': 'женщина',
+            '岁': 'лет',
+            '红色': 'красный',
+            '绿色': 'зеленый',
+            '蓝色': 'синий',
+            '黑色': 'черный',
+            '白色': 'белый',
+            '黄色': 'желтый',
+            '棕色': 'коричневый',
+            '金色': 'золотой',
+            '银色': 'серебряный',
+            '热情': 'страстный',
+            '优雅': 'элегантный',
+            '勇敢': 'храбрый',
+            '聪明': 'умный',
+            '善良': 'добрый',
+            '幽默': 'юмористический',
+            '严肃': 'серьезный',
+            '温柔': 'нежный',
+            '强壮': 'сильный',
+            '敏捷': 'проворный',
+            '神秘': 'таинственный',
+            '人类': 'человек',
+            '精灵': 'эльф',
+            '兽人': 'орк',
+            '矮人': 'гном',
+            '龙族': 'дракон',
+            '天使': 'ангел',
+            '恶魔': 'демон'
+        }
+        
+        # 替换中文词汇为俄语
+        translated_request = user_request
+        for chinese, russian in chinese_russian_map.items():
+            translated_request = translated_request.replace(chinese, russian)
+        
+        return translated_request
+    
+    return user_request
+
 def build_spark_text_prompt(user_request: str, system_role: str, language: str) -> list:
+    # 检测混合语言情况
+    lang_detection = detect_mixed_language(user_request)
+    print(f"[语言检测] 俄语字符: {lang_detection['russian_count']}, 中文字符: {lang_detection['chinese_count']}, 英语字符: {lang_detection['english_count']}")
+    
+    # 如果是混合语言输入，进行翻译处理
+    if lang_detection['has_russian'] and lang_detection['has_chinese']:
+        print(f"[语言处理] 检测到俄语+中文混合输入，进行翻译处理")
+        user_request = translate_mixed_language_prompt(user_request, language)
+        print(f"[语言处理] 翻译后提示词: {user_request}")
+    
     lang_instruction = "请用俄语回答。" if language == "ru" else "请用中文回答。"
     full_prompt = f"{system_role} {lang_instruction} 用户要求：{user_request}"
     return [{"role": "user", "content": full_prompt}]
@@ -429,12 +511,13 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     # 使用更可靠的多语言字体方案
     # 尝试使用支持Unicode的字体，优先使用系统字体
     unicode_fonts = [
-        'Arial Unicode MS',  # 支持中文、英文、俄语
-        'DejaVu Sans',       # 开源Unicode字体
-        'SimSun',            # 宋体
-        'SimHei',            # 黑体
-        'Microsoft YaHei',   # 微软雅黑
-        'Helvetica'          # 默认字体
+        'Times New Roman',    # 新罗马字体，特别适合俄语
+        'Arial Unicode MS',   # 支持中文、英文、俄语
+        'DejaVu Sans',        # 开源Unicode字体
+        'SimSun',             # 宋体
+        'SimHei',             # 黑体
+        'Microsoft YaHei',    # 微软雅黑
+        'Helvetica'           # 默认字体
     ]
     
     # 检查并注册可用的字体
@@ -443,14 +526,26 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         
-        # 常见字体路径
+        # 常见字体路径 - 确保支持俄语字符
         font_paths = {
-            'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
-            'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',
-            'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',
-            'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',
-            'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf'  # 可能需要安装
+            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',  # 支持俄语
+            'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',  # 支持俄语
+            'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',  # 开源Unicode字体
+            'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
+            'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
+            'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
         }
+        
+        # 添加更多俄语支持字体
+        russian_font_paths = {
+            'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+            'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
+            'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
+            'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
+        }
+        
+        # 合并字体路径
+        font_paths.update(russian_font_paths)
         
         for font_name, font_path in font_paths.items():
             if os.path.exists(font_path):
@@ -464,15 +559,34 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     except ImportError:
         print("[PDF生成] 无法导入字体模块")
     
-    # 选择最佳字体
+    # 选择最佳字体 - 根据语言优先选择
     selected_font = 'Helvetica'  # 默认字体
-    for font in unicode_fonts:
-        if font in available_fonts:
-            selected_font = font
-            print(f"[PDF生成] 使用字体: {selected_font}")
-            break
     
-    # 创建支持多语言的样式
+    # 俄语文档优先使用支持俄语的字体
+    if language == "ru":
+        # 俄语字体优先级
+        russian_fonts = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Arial Unicode MS', 'DejaVu Sans']
+        for font in russian_fonts:
+            if font in available_fonts:
+                selected_font = font
+                print(f"[PDF生成] 俄语文档，使用字体: {selected_font}")
+                break
+        else:
+            # 如果没有找到俄语字体，使用默认字体
+            for font in unicode_fonts:
+                if font in available_fonts:
+                    selected_font = font
+                    print(f"[PDF生成] 使用字体: {selected_font}")
+                    break
+    else:
+        # 其他语言按优先级选择
+        for font in unicode_fonts:
+            if font in available_fonts:
+                selected_font = font
+                print(f"[PDF生成] 使用字体: {selected_font}")
+                break
+    
+    # 创建支持多语言的样式 - 确保编码正确
     title_style = ParagraphStyle(
         'CustomTitle',
         fontName=selected_font,

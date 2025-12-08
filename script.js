@@ -1,5 +1,5 @@
 const API_BASE = 'http://localhost:8001/api';
-let currentLanguage = 'zh';
+let currentLanguage = 'ru';
 let messageHistory = [];
 let currentRequestController = null; // 用于中止当前请求
 let isGenerating = false; // 标记是否正在生成
@@ -98,6 +98,10 @@ function loadChatHistory() {
         if (savedLanguage) {
             currentLanguage = savedLanguage;
             document.getElementById('lang').value = currentLanguage;
+        } else {
+            // 如果没有保存的语言设置，使用默认的俄语
+            currentLanguage = 'ru';
+            document.getElementById('lang').value = currentLanguage;
         }
         
         // 重新渲染消息
@@ -117,6 +121,10 @@ function loadChatHistory() {
         });
         
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else {
+        // 如果没有历史记录，设置默认语言为俄语
+        currentLanguage = 'ru';
+        document.getElementById('lang').value = currentLanguage;
     }
 }
 
@@ -269,67 +277,137 @@ const translations = {
     }
 };
 
-// 预设配置
+// 预设配置 - 多语言支持
 const presets = {
     russian_knight: {
-        gender: "男",
-        age: "35岁",
-        height: "185cm",
-        weight: "85kg",
-        hair_color: "棕色",
-        eye_color: "灰色",
-        profession: "骑士",
-        personality: "勇敢，忠诚，严肃",
-        nationality: "俄罗斯",
-        fantasy_race: "人类"
+        zh: {
+            gender: "男",
+            age: "35岁",
+            height: "185cm",
+            weight: "85kg",
+            hair_color: "棕色",
+            eye_color: "灰色",
+            profession: "骑士",
+            personality: "勇敢，忠诚，严肃",
+            nationality: "俄罗斯",
+            fantasy_race: "人类"
+        },
+        ru: {
+            gender: "мужчина",
+            age: "35 лет",
+            height: "185см",
+            weight: "85кг",
+            hair_color: "коричневый",
+            eye_color: "серый",
+            profession: "рыцарь",
+            personality: "храбрый, верный, серьезный",
+            nationality: "Россия",
+            fantasy_race: "человек"
+        }
     },
     english_wizard: {
-        gender: "男",
-        age: "65岁",
-        height: "175cm",
-        weight: "70kg",
-        hair_color: "白色",
-        eye_color: "蓝色",
-        profession: "巫师",
-        personality: "智慧，神秘，温和",
-        nationality: "英国",
-        fantasy_race: "人类"
+        zh: {
+            gender: "男",
+            age: "65岁",
+            height: "175cm",
+            weight: "70kg",
+            hair_color: "白色",
+            eye_color: "蓝色",
+            profession: "巫师",
+            personality: "智慧，神秘，温和",
+            nationality: "英国",
+            fantasy_race: "人类"
+        },
+        ru: {
+            gender: "мужчина",
+            age: "65 лет",
+            height: "175см",
+            weight: "70кг",
+            hair_color: "белый",
+            eye_color: "синий",
+            profession: "волшебник",
+            personality: "мудрый, таинственный, мягкий",
+            nationality: "Англия",
+            fantasy_race: "человек"
+        }
     },
     chinese_warrior: {
-        gender: "男",
-        age: "28岁",
-        height: "178cm",
-        weight: "75kg",
-        hair_color: "黑色",
-        eye_color: "黑色",
-        profession: "武士",
-        personality: "忠诚，勇敢，正直",
-        nationality: "中国",
-        fantasy_race: "人类"
+        zh: {
+            gender: "男",
+            age: "28岁",
+            height: "178cm",
+            weight: "75kg",
+            hair_color: "黑色",
+            eye_color: "黑色",
+            profession: "武士",
+            personality: "忠诚，勇敢，正直",
+            nationality: "中国",
+            fantasy_race: "人类"
+        },
+        ru: {
+            gender: "мужчина",
+            age: "28 лет",
+            height: "178см",
+            weight: "75кг",
+            hair_color: "черный",
+            eye_color: "черный",
+            profession: "воин",
+            personality: "верный, храбрый, честный",
+            nationality: "Китай",
+            fantasy_race: "человек"
+        }
     },
     elf_archer: {
-        gender: "女",
-        age: "150岁",
-        height: "180cm",
-        weight: "60kg",
-        hair_color: "银色",
-        eye_color: "绿色",
-        profession: "弓箭手",
-        personality: "优雅，敏捷，神秘",
-        nationality: "精灵王国",
-        fantasy_race: "精灵"
+        zh: {
+            gender: "女",
+            age: "150岁",
+            height: "180cm",
+            weight: "60kg",
+            hair_color: "银色",
+            eye_color: "绿色",
+            profession: "弓箭手",
+            personality: "优雅，敏捷，神秘",
+            nationality: "精灵王国",
+            fantasy_race: "精灵"
+        },
+        ru: {
+            gender: "женщина",
+            age: "150 лет",
+            height: "180см",
+            weight: "60кг",
+            hair_color: "серебряный",
+            eye_color: "зеленый",
+            profession: "лучник",
+            personality: "элегантный, проворный, таинственный",
+            nationality: "Эльфийское королевство",
+            fantasy_race: "эльф"
+        }
     },
     dwarf_blacksmith: {
-        gender: "男",
-        age: "80岁",
-        height: "140cm",
-        weight: "90kg",
-        hair_color: "红色",
-        eye_color: "棕色",
-        profession: "铁匠",
-        personality: "坚韧，诚实，热情",
-        nationality: "矮人山脉",
-        fantasy_race: "矮人"
+        zh: {
+            gender: "男",
+            age: "80岁",
+            height: "140cm",
+            weight: "90kg",
+            hair_color: "红色",
+            eye_color: "棕色",
+            profession: "铁匠",
+            personality: "坚韧，诚实，热情",
+            nationality: "矮人山脉",
+            fantasy_race: "矮人"
+        },
+        ru: {
+            gender: "мужчина",
+            age: "80 лет",
+            height: "140см",
+            weight: "90кг",
+            hair_color: "красный",
+            eye_color: "коричневый",
+            profession: "кузнец",
+            personality: "стойкий, честный, страстный",
+            nationality: "Горный край дварфов",
+            fantasy_race: "гном"
+        }
     }
 };
 
@@ -548,7 +626,7 @@ function updateCharacterForm() {
         </div>
         <div class="form-group">
             <label>${t.ageLabel}</label>
-            <input type="text" id="customAge" placeholder="${t.agePlaceholder}" value="${currentLanguage === 'zh' ? '30岁' : '30 лет'}">
+            <input type="text" id="customAge" placeholder="${t.agePlaceholder}" value="${currentLanguage === 'zh' ? '20岁' : '20 лет'}">
         </div>
         <div class="form-group">
             <label>${t.heightLabel}</label>
@@ -695,15 +773,144 @@ function setupCustomInputHandlers() {
 }
 
 // 生成自定义角色
+// 辅助函数：获取中文到俄文的翻译
+function getRussianTranslation(chineseText) {
+    // 发色翻译
+    const hairColorTranslations = {
+        '黑色': 'черные',
+        '棕色': 'коричневые',
+        '金色': 'золотые',
+        '红色': 'рыжие',
+        '白色': 'белые',
+        '银色': 'серебристые',
+        '蓝色': 'синие',
+        '紫色': 'фиолетовые',
+        '绿色': 'зеленые',
+        '粉色': 'розовые'
+    };
+    
+    // 瞳色翻译
+    const eyeColorTranslations = {
+        '黑色': 'черные',
+        '棕色': 'коричневые',
+        '蓝色': 'голубые',
+        'зеленые': 'зеленые',
+        'серые': 'серые',
+        'янтарные': 'янтарные',
+        'фиолетовые': 'фиолетовые',
+        'красные': 'красные',
+        'золотые': 'золотые',
+        'серебристые': 'серебристые'
+    };
+    
+    // 性格翻译
+    const personalityTranslations = {
+        '勇敢': 'храбрый',
+        'мудрый': 'мудрый',
+        'загадочный': 'загадочный',
+        'мягкий': 'мягкий',
+        'элегантный': 'элегантный',
+        'проворный': 'проворный',
+        'стойкий': 'стойкий',
+        'честный': 'честный',
+        'веселый': 'веселый',
+        'серьезный': 'серьезный',
+        'страстный': 'страстный',
+        'спокойный': 'спокойный',
+        'решительный': 'решительный',
+        'осторожный': 'осторожный',
+        'оптимистичный': 'оптимистичный',
+        'открытый': 'открытый'
+    };
+    
+    // страна
+    const nationalityTranslations = {
+        'Китай': 'Китай',
+        'Россия': 'Россия',
+        'Англия': 'Англия',
+        'Япония': 'Япония',
+        'Франция': 'Франция',
+        'Германия': 'Германия',
+        'Италия': 'Италия',
+        'Испания': 'Испания',
+        'США': 'США',
+        'Индия': 'Индия',
+        'Египет': 'Египет',
+        'Греция': 'Греция',
+        'Бразилия': 'Бразилия',
+        'Мексика': 'Мексика',
+        'Корея': 'Корея',
+        'Таиланд': 'Таиланд',
+        'Австралия': 'Австралия',
+        'Канада': 'Канада'
+    };
+    
+    // профессия
+    const professionTranslations = {
+        'рыцарь': 'рыцарь',
+        'волшебник': 'волшебник',
+        'лучник': 'лучник',
+        'воин': 'воин',
+        'маг': 'маг',
+        'вор': 'вор',
+        'священник': 'священник',
+        'торговец': 'торговец',
+        'фермер': 'фермер',
+        'ученый': 'ученый',
+        'художник': 'художник',
+        'доктор': 'доктор',
+        'инженер': 'инженер',
+        'учитель': 'учитель',
+        'повар': 'повар',
+        'моряк': 'моряк',
+        'охотник': 'охотник',
+        'кузнец': 'кузнец',
+        'алхимик': 'алхимик',
+        'бард': 'бард'
+    };
+    
+    // раса
+    const raceTranslations = {
+        'человек': 'человек',
+        'эльф': 'эльф',
+        'гном': 'гном',
+        'орк': 'орк',
+        'дракон': 'дракон',
+        'ангел': 'ангел',
+        'демон': 'демон',
+        'вампир': 'вампир',
+        'оборотень': 'оборотень',
+        'фея': 'фея',
+        'элементаль': 'элементаль',
+        'механическое существо': 'механическое существо',
+        'нежить': 'нежить',
+        'кентавр': 'кентавр',
+        'троль': 'троль',
+        'гоблин': 'гоблин',
+        'нага': 'нага',
+        'друид': 'друид'
+    };
+    
+    // попытка найти перевод
+    return hairColorTranslations[chineseText] || 
+           eyeColorTranslations[chineseText] || 
+           personalityTranslations[chineseText] || 
+           nationalityTranslations[chineseText] || 
+           professionTranslations[chineseText] || 
+           raceTranslations[chineseText] || 
+           chineseText; // если перевод не найден, вернуть исходный текст
+}
+
 async function generateCustomCharacter() {
-    // 获取表单值，处理自定义输入
+    // Получение значений формы, обработка пользовательского ввода
     const getFieldValue = (selectId, inputId) => {
         const select = document.getElementById(selectId);
         const input = document.getElementById(inputId);
         return select.value === 'custom' ? input.value : select.value;
     };
     
-    const request = {
+    // Получение исходных значений
+    const rawValues = {
         gender: document.getElementById('customGender').value,
         age: document.getElementById('customAge').value,
         height: document.getElementById('customHeight').value,
@@ -713,11 +920,192 @@ async function generateCustomCharacter() {
         profession: getFieldValue('customProfession', 'customProfessionInput'),
         personality: getFieldValue('customPersonality', 'customPersonalityInput'),
         nationality: getFieldValue('customNationality', 'customNationalityInput'),
-        fantasy_race: getFieldValue('customRace', 'customRaceInput'),
+        fantasy_race: getFieldValue('customRace', 'customRaceInput')
+    };
+    
+    // Получение локализованных значений в зависимости от текущего языка
+    const localizedValues = {
+        gender: currentLanguage === 'zh' ? rawValues.gender : (rawValues.gender === '男' ? 'мужчина' : 'женщина'),
+        age: currentLanguage === 'zh' ? rawValues.age : rawValues.age.replace('岁', ' лет'),
+        height: currentLanguage === 'zh' ? rawValues.height : rawValues.height.replace('cm', ' см'),
+        weight: currentLanguage === 'zh' ? rawValues.weight : rawValues.weight.replace('kg', ' кг'),
+        hair_color: currentLanguage === 'zh' ? rawValues.hair_color : getRussianTranslation(rawValues.hair_color),
+        eye_color: currentLanguage === 'zh' ? rawValues.eye_color : getRussianTranslation(rawValues.eye_color),
+        profession: currentLanguage === 'zh' ? rawValues.profession : getRussianTranslation(rawValues.profession),
+        personality: currentLanguage === 'zh' ? rawValues.personality : getRussianTranslation(rawValues.personality),
+        nationality: currentLanguage === 'zh' ? rawValues.nationality : getRussianTranslation(rawValues.nationality),
+        fantasy_race: currentLanguage === 'zh' ? rawValues.fantasy_race : getRussianTranslation(rawValues.fantasy_race)
+    };
+    
+    const request = {
+        gender: rawValues.gender,
+        age: rawValues.age,
+        height: rawValues.height,
+        weight: rawValues.weight,
+        hair_color: rawValues.hair_color,
+        eye_color: rawValues.eye_color,
+        profession: rawValues.profession,
+        personality: rawValues.personality,
+        nationality: rawValues.nationality,
+        fantasy_race: rawValues.fantasy_race,
         language: currentLanguage
     };
     
-    // 创建详细的提示文本，包含所有参数
+    // Создание подробного текста запроса, содержащего все параметры
+    // Для русскоязычной среды подготовка переведенных значений
+    const localizedRequest = {...request};
+    
+    if (currentLanguage === 'ru') {
+        // перевод пола
+        const genderTranslations = {
+            '男': 'мужчина',
+            '女': 'женщина'
+        };
+        
+        // перевод цвета волос
+        const hairColorTranslations = {
+            'черные': 'черные',
+            'коричневые': 'коричневые',
+            'золотые': 'золотые',
+            'рыжие': 'рыжие',
+            'белые': 'белые',
+            'серебристые': 'серебристые',
+            'синие': 'синие',
+            'фиолетовые': 'фиолетовые',
+            'зеленые': 'зеленые',
+            'розовые': 'розовые'
+        };
+        
+        // перевод цвета глаз
+        const eyeColorTranslations = {
+            'черные': 'черные',
+            'коричневые': 'коричневые',
+            'голубые': 'голубые',
+            'зеленые': 'зеленые',
+            'серые': 'серые',
+            'янтарные': 'янтарные',
+            'фиолетовые': 'фиолетовые',
+            'красные': 'красные',
+            'золотые': 'золотые',
+            'серебристые': 'серебристые'
+        };
+        
+        // перевод характера
+        const personalityTranslations = {
+            'храбрый': 'храбрый',
+            'мудрый': 'мудрый',
+            'загадочный': 'загадочный',
+            'мягкий': 'мягкий',
+            'элегантный': 'элегантный',
+            'проворный': 'проворный',
+            'стойкий': 'стойкий',
+            'честный': 'честный',
+            'веселый': 'веселый',
+            'серьезный': 'серьезный',
+            'страстный': 'страстный',
+            'спокойный': 'спокойный',
+            'решительный': 'решительный',
+            'осторожный': 'осторожный',
+            'оптимистичный': 'оптимистичный',
+            'открытый': 'открытый',
+            '，': ', ',
+            ',': ', '
+        };
+        
+        // страна
+        const nationalityTranslations = {
+            'Китай': 'Китай',
+            'Россия': 'Россия',
+            'Англия': 'Англия',
+            'Япония': 'Япония',
+            'Франция': 'Франция',
+            'Германия': 'Германия',
+            'Италия': 'Италия',
+            'Испания': 'Испания',
+            'США': 'Америка',
+            'Индия': 'Индия',
+            'Египет': 'Египет',
+            'Греция': 'Греция',
+            'Бразилия': 'Бразилия',
+            'Мексика': 'Мексика',
+            'Корея': 'Корея',
+            'Таиланд': 'Таиланд',
+            'Австралия': 'Австралия',
+            'Канада': 'Канада'
+        };
+        
+        // профессия
+        const professionTranslations = {
+            'рыцарь': 'рыцарь',
+            'волшебник': 'волшебник',
+            'лучник': 'лучник',
+            'воин': 'воин',
+            'маг': 'маг',
+            'вор': 'вор',
+            'священник': 'священник',
+            'торговец': 'торговец',
+            'фермер': 'фермер',
+            'ученый': 'ученый',
+            'художник': 'художник',
+            'доктор': 'доктор',
+            'инженер': 'инженер',
+            'учитель': 'учитель',
+            'повар': 'повар',
+            'моряк': 'моряк',
+            'охотник': 'охотник',
+            'кузнец': 'кузнец',
+            'алхимик': 'алхимик',
+            'бард': 'бард'
+        };
+        
+        // раса
+        const raceTranslations = {
+            'человек': 'человек',
+            'эльф': 'эльф',
+            'гном': 'гном',
+            'орк': 'орк',
+            'дракон': 'дракон',
+            'ангел': 'ангел',
+            'демон': 'демон',
+            'вампир': 'вампир',
+            'оборотень': 'оборотень',
+            'фея': 'фея',
+            'элементаль': 'элементаль',
+            'механическое существо': 'механическое существо',
+            'нежить': 'нежить',
+            'кентавр': 'кентавр',
+            'троль': 'троль',
+            'гоблин': 'гоблин',
+            'нага': 'нага',
+            'друид': 'друид'
+        };
+        
+        // перевод пола
+        localizedRequest.gender = genderTranslations[request.gender] || request.gender;
+        localizedRequest.hair_color = hairColorTranslations[request.hair_color] || request.hair_color;
+        localizedRequest.eye_color = eyeColorTranslations[request.eye_color] || request.eye_color;
+        localizedRequest.nationality = nationalityTranslations[request.nationality] || request.nationality;
+        localizedRequest.profession = professionTranslations[request.profession] || request.profession;
+        localizedRequest.fantasy_race = raceTranslations[request.fantasy_race] || request.fantasy_race;
+        
+        // перевод характера (может быть несколько характеристик)
+        if (request.personality.includes('，') || request.personality.includes(',')) {
+            const personalities = request.personality.replace(/，/g, ',').split(',');
+            const translatedPersonalities = personalities.map(p => {
+                const trimmed = p.trim();
+                return personalityTranslations[trimmed] || trimmed;
+            });
+            localizedRequest.personality = translatedPersonalities.join(', ');
+        } else {
+            localizedRequest.personality = personalityTranslations[request.personality] || request.personality;
+        }
+        
+        // перевод единиц измерения возраста, роста и веса
+        localizedRequest.age = request.age.replace('лет', ' лет');
+        localizedRequest.height = request.height.replace('см', 'см');
+        localizedRequest.weight = request.weight.replace('кг', 'кг');
+    }
+    
     const promptText = currentLanguage === 'zh' ? 
         `生成一个${request.nationality}的${request.profession}角色：
         - 性别：${request.gender}
@@ -726,18 +1114,18 @@ async function generateCustomCharacter() {
         - 发色：${request.hair_color}，瞳色：${request.eye_color}
         - 性格：${request.personality}
         - 种族：${request.fantasy_race}` :
-        `Создать персонажа ${request.nationality} ${request.profession}：
-        - Пол: ${request.gender}
-        - Возраст: ${request.age}
-        - Рост: ${request.height}, Вес: ${request.weight}
-        - Цвет волос: ${request.hair_color}, Цвет глаз: ${request.eye_color}
-        - Характер: ${request.personality}
-        - Раса: ${request.fantasy_race}`;
+        `Создать персонажа ${localizedRequest.nationality} ${localizedRequest.profession}：
+        - Пол: ${localizedRequest.gender}
+        - Возраст: ${localizedRequest.age}
+        - Рост: ${localizedRequest.height}, Вес: ${localizedRequest.weight}
+        - Цвет волос: ${localizedRequest.hair_color}, Цвет глаз: ${localizedRequest.eye_color}
+        - Характер: ${localizedRequest.personality}
+        - Раса: ${localizedRequest.fantasy_race}`;
     
-    // 添加用户消息
+    // Добавление сообщения пользователя
     addMessage(promptText, true);
     
-    // 显示输入指示器
+    // Отображение индикатора ввода
     showTypingIndicator();
     
     try {
@@ -748,12 +1136,12 @@ async function generateCustomCharacter() {
         } else {
             const character = response.character;
             
-            // 调试：打印响应数据
-            console.log('自定义角色生成响应:', response);
+            // Отладка: вывод данных ответа
+            console.log('Создание персонажа:', response);
             
-            // 检查character对象是否存在
+            // Проверка наличия объекта character
             if (!character) {
-                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                addMessage(`❌ ${currentLanguage === 'zh' ? 'Роль не создана: неверный формат данных' : 'Ошибка создания персонажа: неверный формат данных'}`);
                 return;
             }
             
@@ -765,7 +1153,7 @@ async function generateCustomCharacter() {
                          👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
                          📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
             
-            // 添加PDF下载链接
+            // Добавление ссылки для скачивания PDF
             if (response.pdf_url) {
                 resultText += currentLanguage === 'zh' ?
                     `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
@@ -778,10 +1166,10 @@ async function generateCustomCharacter() {
             
             addMessage(resultText);
             
-            // 添加图片显示
+            // Добавление изображения
             if (response.image_url) {
                 setTimeout(() => {
-                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
                 }, 100);
             } else {
                 setTimeout(() => {
@@ -792,13 +1180,13 @@ async function generateCustomCharacter() {
             }
         }
     } catch (error) {
-        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос не удался：' : 'Запрос не удался：'} ${error.message}`);
     } finally {
         hideTypingIndicator();
     }
 }
 
-// 新建对话
+// Новый диалог
 function newConversation() {
     const t = translations[currentLanguage];
     if (confirm(t.newChatConfirm)) {
@@ -838,8 +1226,13 @@ function handleQuickAction(action) {
     switch(action) {
         case 'generateName':
             // 随机选择国家和奇幻种族
-            const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度'];
-            const fantasyTypes = ['精灵', '矮人', '兽人', '龙族', '巫师', '魔法师', '吸血鬼', '狼人', '天使', '恶魔'];
+            const nationalities = currentLanguage === 'zh' ? 
+                ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度'] :
+                ['Китай', 'Россия', 'Англия', 'Япония', 'Франция', 'Германия', 'Италия', 'Испания', 'США', 'Индия'];
+                
+            const fantasyTypes = currentLanguage === 'zh' ?
+                ['精灵', '矮人', '兽人', '龙族', '巫师', '魔法师', '吸血鬼', '狼人', '天使', '恶魔'] :
+                ['эльф', 'гном', 'орк', 'дракон', 'волшебник', 'маг', 'вампир', 'оборотень', 'ангел', 'демон'];
             
             const randomNationality = nationalities[Math.floor(Math.random() * nationalities.length)];
             const randomFantasyType = Math.random() > 0.5 ? fantasyTypes[Math.floor(Math.random() * fantasyTypes.length)] : '';
@@ -856,15 +1249,20 @@ function handleQuickAction(action) {
             
         case 'generateBookTitle':
             // 随机选择题材和风格
-            const genres = ['奇幻', '科幻', '爱情', '悬疑', '历史', '武侠', '都市', '恐怖', '冒险', '推理'];
-            const styles = ['史诗级', '浪漫', '惊悚', '幽默', '黑暗', '治愈', '热血', '悬疑', '温馨', '惊险'];
+            const genres = currentLanguage === 'zh' ? 
+                ['奇幻', '科幻', '爱情', '悬疑', '历史', '武侠', '都市', '恐怖', '冒险', '推理'] :
+                ['фэнтези', 'научная фантастика', 'романтика', 'триллер', 'исторический', 'боевик', 'городской', 'ужасы', 'приключения', 'детектив'];
+                
+            const styles = currentLanguage === 'zh' ? 
+                ['史诗级', '浪漫', '惊悚', '幽默', '黑暗', '治愈', '热血', '悬疑', '温馨', '惊险'] :
+                ['эпический', 'романтический', 'захватывающий', 'юмористический', 'темный', 'трогательный', 'динамичный', 'интригующий', 'уютный', 'зловещий'];
             
             const randomGenre = genres[Math.floor(Math.random() * genres.length)];
             const randomStyle = styles[Math.floor(Math.random() * styles.length)];
             
             message = currentLanguage === 'zh' ?
                 `请帮我生成一个${randomStyle}的${randomGenre}小说书名` :
-                `Пожалуйста, создайте ${randomStyle} название ${randomGenre} романа`;
+                `Пожалуйста, создайте ${randomStyle} ${randomGenre} название романа`;
             break;
             
         case 'chat':
@@ -1005,6 +1403,9 @@ async function generateCharacterFromPreset(presetKey) {
     const t = translations[currentLanguage];
     const presetName = t.presets[presetKey];
     
+    // 根据当前语言选择预设数据
+    const presetData = preset[currentLanguage] || preset['zh']; // 默认使用中文
+    
     // 添加用户消息
     addMessage(`${currentLanguage === 'zh' ? '生成' : 'Создать'} ${presetName}`, true);
     
@@ -1013,7 +1414,7 @@ async function generateCharacterFromPreset(presetKey) {
     
     try {
         const response = await callApi('generate/character', 'POST', {
-            ...preset,
+            ...presetData,
             language: currentLanguage
         });
         
@@ -1493,7 +1894,7 @@ async function generateCustomCharacter() {
     // 添加用户消息
     addMessage(promptText, true);
     
-    // 显示停止按钮，隐藏发送按钮
+    // 显示停止 кнопку,隐藏发送 кнопку
     toggleButtons(true);
     
     // 显示输入指示器
@@ -1519,61 +1920,61 @@ async function generateCustomCharacter() {
                  📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
                 `🎨 <strong>Персонаж создан успешно！</strong><br>
                  👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+                 📝 <strong>Описание：</strong>${character.description || 'Без описания'}<br>`;
             
             // 添加PDF下载链接
             if (response.pdf_url) {
                 resultText += currentLanguage === 'zh' ?
-                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF-архив</a>` :
                     `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
             } else {
                 resultText += currentLanguage === 'zh' ?
-                    `<span style="color: #666;">（PDF生成失败）</span>` :
-                    `<span style="color: #666;">（PDF не создан）</span>`;
+                    `<span style="color: #666;">(PDF не создан)</span>` :
+                    `<span style="color: #666;">(PDF не создан)</span>`;
             }
             
             addMessage(resultText);
             
-            // 添加图片显示
+            // Добавляем изображение
             if (response.image_url) {
                 setTimeout(() => {
-                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
                 }, 100);
             } else {
                 setTimeout(() => {
                     addMessage(currentLanguage === 'zh' ? 
-                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
-                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>` :
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>`);
                 }, 100);
             }
         }
     } catch (error) {
-        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос завершился с ошибкой:' : 'Запрос не удался:'} ${error.message}`);
     } finally {
-        // 隐藏停止按钮，显示发送按钮
+        // Скрываем кнопку остановки, показываем кнопку отправки
         toggleButtons(false);
         hideTypingIndicator();
     }
 }
 
-// 修改随机角色生成函数以支持停止功能
+// 生成真正随机的角色
 async function generateRandomCharacter() {
     const t = translations[currentLanguage];
     
-    // 随机生成各种角色属性
+    // Случайным образом генерируем различные атрибуты персонажа (значения на китайском)
     const genders = ['男', '女'];
     const ages = ['18岁', '22岁', '28岁', '35岁', '45岁', '60岁', '150岁', '300岁'];
     const heights = ['160cm', '170cm', '175cm', '180cm', '185cm', '190cm', '200cm', '140cm'];
     const weights = ['50kg', '60kg', '65kg', '70kg', '75kg', '80kg', '85kg', '90kg'];
-    const hairColors = ['黑色', '棕色', '金色', '红色', '白色', '银色', '蓝色', '紫色', '绿色'];
-    const eyeColors = ['黑色', '棕色', '蓝色', '绿色', '灰色', '琥珀色', '紫色', '红色', '金色'];
-    const professions = ['骑士', '巫师', '弓箭手', '战士', '法师', '盗贼', '牧师', '商人', '农民', '学者', '艺术家', '医生'];
-    const personalities = ['勇敢', '智慧', '神秘', '温和', '优雅', '敏捷', '坚韧', '诚实', '幽默', '严肃', '热情', '冷静'];
-    const nationalities = ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度', '埃及', '希腊'];
-    const fantasyRaces = ['人类', '精灵', '矮人', '兽人', '龙族', '天使', '恶魔', '吸血鬼', '狼人', '妖精', '元素生物', '机械生命'];
+    const hairColors = ['黑色', '棕色', '金色', '红色', '白色', '银色', '蓝色', '紫色', 'зеленый'];
+    const eyeColors = ['черный', 'коричневый', 'синий', 'зеленый', 'серый', 'оранжевый', 'фиолетовый', 'красный', 'золотой'];
+    const professions = ['рыцарь', 'маг', 'лучник', 'воин', 'чародей', 'вор', 'жрец', 'торговец', 'фермер', 'ученый', 'художник', 'доктор'];
+    const personalities = ['храбрый', 'мудрый', 'тайный', 'миролюбивый', 'изящный', 'уклюжий', 'стойкий', 'честный', 'юмористичный', 'строгий', 'живой', 'спокойный'];
+    const nationalities = ['Китай', 'Россия', 'Великобритания', 'Япония', 'Франция', 'Германия', 'Италия', 'Испания', 'США', 'Индия', 'Египет', 'Греция'];
+    const fantasyRaces = ['человек', 'эльф', 'дварф', 'орк', 'дракон', 'ангел', 'демон', 'вампир', 'оборотень', 'эльф', 'элементальное существо', 'механическое существо'];
     
-    // 随机选择属性
-    const randomRequest = {
+    // Случайным образом выбираем атрибуты (значения на китайском)
+    const rawRequest = {
         gender: genders[Math.floor(Math.random() * genders.length)],
         age: ages[Math.floor(Math.random() * ages.length)],
         height: heights[Math.floor(Math.random() * heights.length)],
@@ -1587,88 +1988,104 @@ async function generateRandomCharacter() {
         language: currentLanguage
     };
     
-    // 创建提示文本
-    const promptText = currentLanguage === 'zh' ? 
-        `生成一个${randomRequest.nationality}的${randomRequest.fantasy_race ? randomRequest.fantasy_race + '' : ''}${randomRequest.profession}角色：
-        - 性别：${randomRequest.gender}
-        - 年龄：${randomRequest.age}
-        - 身高：${randomRequest.height}，体重：${randomRequest.weight}
-        - 发色：${randomRequest.hair_color}，瞳色：${randomRequest.eye_color}
-        - 性格：${randomRequest.personality}
-        ${randomRequest.fantasy_race ? '- 种族：' + randomRequest.fantasy_race : ''}` :
-        `Создать персонажа ${randomRequest.nationality} ${randomRequest.fantasy_race ? randomRequest.fantasy_race + ' ' : ''}${randomRequest.profession}：
-        - Пол: ${randomRequest.gender}
-        - Возраст: ${randomRequest.age}
-        - Рост: ${randomRequest.height}, Вес: ${randomRequest.weight}
-        - Цвет волос: ${randomRequest.hair_color}, Цвет глаз: ${randomRequest.eye_color}
-        - Характер: ${randomRequest.personality}
-        ${randomRequest.fantasy_race ? '- Раса: ' + randomRequest.fantasy_race : ''}`;
+    // Получаем локализованные значения в зависимости от текущего языка
+    const localizedRequest = {
+        gender: currentLanguage === 'zh' ? rawRequest.gender : (rawRequest.gender === '男' ? 'мужчина' : 'женщина'),
+        age: currentLanguage === 'zh' ? rawRequest.age : rawRequest.age.replace('岁', ' лет').replace('cm', 'см').replace('kg', 'кг'),
+        height: currentLanguage === 'zh' ? rawRequest.height : rawRequest.height.replace('cm', 'см'),
+        weight: currentLanguage === 'zh' ? rawRequest.weight : rawRequest.weight.replace('kg', 'кг'),
+        hair_color: currentLanguage === 'zh' ? rawRequest.hair_color : getRussianTranslation(rawRequest.hair_color),
+        eye_color: currentLanguage === 'zh' ? rawRequest.eye_color : getRussianTranslation(rawRequest.eye_color),
+        profession: currentLanguage === 'zh' ? rawRequest.profession : getRussianTranslation(rawRequest.profession),
+        personality: currentLanguage === 'zh' ? rawRequest.personality : getRussianTranslation(rawRequest.personality),
+        nationality: currentLanguage === 'zh' ? rawRequest.nationality : getRussianTranslation(rawRequest.nationality),
+        fantasy_race: currentLanguage === 'zh' ? rawRequest.fantasy_race : getRussianTranslation(rawRequest.fantasy_race),
+        language: currentLanguage
+    };
     
-    // 添加用户消息
+    // Создаем текст запроса
+    const promptText = currentLanguage === 'zh' ? 
+        `生成一个${localizedRequest.nationality}的${localizedRequest.fantasy_race ? localizedRequest.fantasy_race + '' : ''}${localizedRequest.profession}角色：
+        - 性别：${localizedRequest.gender}
+        - 年龄：${localizedRequest.age}
+        - Рост：${localizedRequest.height}，Вес：${localizedRequest.weight}
+        - Цвет волос：${localizedRequest.hair_color}，Цвет глаз：${localizedRequest.eye_color}
+        - Характер：${localizedRequest.personality}
+        ${localizedRequest.fantasy_race ? '- Раса：' + localizedRequest.fantasy_race : ''}` :
+        `Создать персонажа ${localizedRequest.nationality} ${localizedRequest.fantasy_race ? localizedRequest.fantasy_race + ' ' : ''}${localizedRequest.profession}：
+        - Пол: ${localizedRequest.gender}
+        - Возраст: ${localizedRequest.age}
+        - Рост: ${localizedRequest.height}, Вес: ${localizedRequest.weight}
+        - Цвет волос: ${localizedRequest.hair_color}, Цвет глаз: ${localizedRequest.eye_color}
+        - Характер: ${localizedRequest.personality}
+        ${localizedRequest.fantasy_race ? '- Раса: ' + localizedRequest.fantasy_race : ''}`;
+    
+    // Добавляем сообщение пользователя
     addMessage(promptText, true);
     
-    // 显示停止按钮，隐藏发送按钮
+    // Показываем кнопку остановки, скрываем кнопку отправки
     toggleButtons(true);
     
-    // 显示输入指示器
+    // Показываем индикатор ввода
     showTypingIndicator();
     
+    // Отправляем запрос на сервер с использованием исходных китайских значений
     try {
-        const response = await callApi('generate/character', 'POST', randomRequest);
+        const response = await callApi('generate/character', 'POST', rawRequest);
         
         if (response.error) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
+            addMessage(`❌ ${currentLanguage === 'zh' ? 'Генерация персонажа завершилась с ошибкой:' : 'Ошибка при создании персонажа:'} ${response.error}`);
         } else {
             const character = response.character;
             
-            // 检查character对象是否存在
+            // Проверяем, существует ли объект character
             if (!character) {
-                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                addMessage(`❌ ${currentLanguage === 'zh' ? 'Генерация персонажа завершилась с ошибкой: неверный формат данных' : 'Ошибка создания персонажа: неверный формат данных'}`);
                 return;
             }
             
             let resultText = currentLanguage === 'zh' ?
-                `🎨 <strong>随机角色生成成功！</strong><br>
-                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
-                `🎨 <strong>Случайный персонаж создан успешно！</strong><br>
-                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+                `🎨 <strong>Случайный персонаж успешно создан!</strong><br>
+                 👤 <strong>Имя:</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание:</strong>${character.description || 'Без описания'}<br>` :
+                `🎨 <strong>Случайный персонаж успешно создан!</strong><br>
+                 👤 <strong>Имя:</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание:</strong>${character.description || 'Без описания'}<br>`;
             
-            // 添加PDF下载链接
+            // Добавляем ссылку для скачивания PDF
             if (response.pdf_url) {
                 resultText += currentLanguage === 'zh' ?
-                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF-архив</a>` :
                     `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
             } else {
                 resultText += currentLanguage === 'zh' ?
-                    `<span style="color: #666;">（PDF生成失败）</span>` :
-                    `<span style="color: #666;">（PDF не создан）</span>`;
+                    `<span style="color: #666;">(PDF не создан)</span>` :
+                    `<span style="color: #666;">(PDF не создан)</span>`;
             }
             
             addMessage(resultText);
             
-            // 添加图片显示
+            // Добавляем изображение
             if (response.image_url) {
                 setTimeout(() => {
-                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
                 }, 100);
             } else {
                 setTimeout(() => {
                     addMessage(currentLanguage === 'zh' ? 
-                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
-                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>` :
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>`);
                 }, 100);
             }
         }
     } catch (error) {
-        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос завершился с ошибкой:' : 'Запрос не удался:'} ${error.message}`);
     } finally {
-        // 隐藏停止按钮，显示发送按钮
+        // Скрываем кнопку остановки, показываем кнопку отправки
         toggleButtons(false);
         hideTypingIndicator();
     }
 }
 
-// 页面加载完成后初始化
+// Инициализация после загрузки страницы
 window.onload = init;
