@@ -114,8 +114,10 @@ def translate_mixed_language_prompt(user_request: str, target_language: str) -> 
         # 常见的中文-俄语词汇映射
         chinese_russian_map = {
             '印度': 'Индия',
+            '德国': 'Германия',
             '矮人': 'гном',
             '医生': 'врач',
+            '水手': 'моряк',
             '男': 'мужчина',
             '女': 'женщина',
             '岁': 'лет',
@@ -130,6 +132,7 @@ def translate_mixed_language_prompt(user_request: str, target_language: str) -> 
             '银色': 'серебряный',
             '热情': 'страстный',
             '优雅': 'элегантный',
+            '温和': 'мягкий',
             '勇敢': 'храбрый',
             '聪明': 'умный',
             '善良': 'добрый',
@@ -143,9 +146,26 @@ def translate_mixed_language_prompt(user_request: str, target_language: str) -> 
             '精灵': 'эльф',
             '兽人': 'орк',
             '矮人': 'гном',
+            '半人马': 'кентавр',
             '龙族': 'дракон',
             '天使': 'ангел',
-            '恶魔': 'демон'
+            '恶魔': 'демон',
+            '法国': 'Франция',
+            '英国': 'Великобритания',
+            '美国': 'США',
+            '中国': 'Китай',
+            '日本': 'Япония',
+            '俄罗斯': 'Россия',
+            '战士': 'воин',
+            '法师': 'маг',
+            '弓箭手': 'лучник',
+            '牧师': 'жрец',
+            '盗贼': 'вор',
+            '骑士': 'рыцарь',
+            '商人': 'торговец',
+            '农民': 'крестьянин',
+            '学者': 'ученый',
+            '艺术家': 'художник'
         }
         
         # 替换中文词汇为俄语
@@ -545,25 +565,27 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
                         print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
                         continue
             
-            # 根据语言选择最佳字体
-            if language == "ru":
-                # 俄语字体优先级
-                russian_priority = [
-                    'Times New Roman', 'Arial', 'Calibri', 'Cambria', 
-                    'Arial Unicode MS', 'Tahoma', 'DejaVu Sans'
-                ]
-                for font in russian_priority:
-                    if font in available_fonts:
-                        selected_font = font
-                        break
-            else:
-                # 中文和其他语言字体优先级
-                chinese_priority = [
-                    'Microsoft YaHei', 'SimHei', 'SimSun', 
-                    'Arial Unicode MS', 'DejaVu Sans', 'Times New Roman'
-                ]
-                for font in chinese_priority:
-                    if font in available_fonts:
+            # 简化字体选择：强制使用支持中文的字体
+            # 无论输入什么语言，都优先选择支持中文的字体，避免中文乱码
+            chinese_fonts = [
+                'Microsoft YaHei',   # 微软雅黑，支持中文和西文
+                'SimHei',            # 黑体，支持中文
+                'SimSun',            # 宋体，支持中文
+                'Arial Unicode MS',  # 支持最广泛的Unicode字体
+                'DejaVu Sans'        # 开源Unicode字体
+            ]
+            
+            # 优先选择支持中文的字体
+            for font in chinese_fonts:
+                if font in available_fonts:
+                    selected_font = font
+                    break
+            
+            # 如果找不到中文字体，使用默认字体
+            if selected_font == 'Helvetica':
+                # 尝试使用其他可用字体
+                for font in available_fonts:
+                    if font != 'Helvetica':
                         selected_font = font
                         break
             
@@ -729,86 +751,46 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         description = re.sub(r'---+\s*', '', description)  # 移除 --- 分隔线
         description = re.sub(r'\*{3,}', '', description)  # 移除 *** 分隔线
         
-        # 改进的格式化逻辑：按照角色名称、外貌描写、性格描写结构分段
-        # 尝试识别描述中的不同部分
-        name_pattern = r'([^。！？.!?]*?(姓名|名字|角色名)[^。！？.!?]*?[。！？.!?])'
-        appearance_pattern = r'([^。！？.!?]*?(外貌|长相|外表|形象|发色|瞳色|身高|体重|眼睛|头发|皮肤)[^。！？.!?]*?[。！？.!?])'
-        personality_pattern = r'([^。！？.!?]*?(性格|个性|脾气|品质|特点|性情|品格)[^。！？.!?]*?[。！？.!?])'
-        race_pattern = r'([^。！？.!?]*?(种族|血统|物种|奇幻种族)[^。！？.!?]*?[。！？.!?])'
+        # 简化描述处理逻辑，避免复杂的分类导致内容重复
+        # 直接使用智能分段，确保内容不重复且连贯
         
-        # 提取不同部分的句子
-        name_sentences = re.findall(name_pattern, description)
-        appearance_sentences = re.findall(appearance_pattern, description)
-        personality_sentences = re.findall(personality_pattern, description)
-        race_sentences = re.findall(race_pattern, description)
-        
-        # 如果无法自动识别结构，使用智能分段
-        if len(name_sentences) > 0 or len(appearance_sentences) > 0 or len(personality_sentences) > 0 or len(race_sentences) > 0:
-            # 按照识别到的结构分段
-            if name_sentences:
-                story.append(safe_paragraph(f"▪️ {safe_text(t['name_info'])}", heading_style))
-                story.append(Spacer(1, 4))
-                for sentence in name_sentences:
-                    story.append(safe_paragraph(sentence[0], desc_style))
-                story.append(Spacer(1, 8))
-            
-            if appearance_sentences:
-                story.append(safe_paragraph(f"▪️ {safe_text(t['appearance'])}", heading_style))
-                story.append(Spacer(1, 4))
-                for sentence in appearance_sentences:
-                    story.append(safe_paragraph(sentence[0], desc_style))
-                story.append(Spacer(1, 8))
-            
-            if personality_sentences:
-                story.append(safe_paragraph(f"▪️ {safe_text(t['personality'])}", heading_style))
-                story.append(Spacer(1, 4))
-                for sentence in personality_sentences:
-                    story.append(safe_paragraph(sentence[0], desc_style))
-                story.append(Spacer(1, 8))
-            
-            if race_sentences:
-                story.append(safe_paragraph(f"▪️ {safe_text(t['race'])}", heading_style))
-                story.append(Spacer(1, 4))
-                for sentence in race_sentences:
-                    story.append(safe_paragraph(sentence[0], desc_style))
-                story.append(Spacer(1, 8))
-            
-            # 添加剩余的描述内容（如果有）
-            remaining_text = description
-            for sentence_group in [name_sentences, appearance_sentences, personality_sentences, race_sentences]:
-                for sentence in sentence_group:
-                    remaining_text = remaining_text.replace(sentence[0], '', 1)
-            
-            if remaining_text.strip():
-                story.append(safe_paragraph(f"▪️ {safe_text(t['background'])}", heading_style))
-                story.append(Spacer(1, 4))
-                story.append(safe_paragraph(remaining_text.strip(), desc_style))
+        # 根据语言选择合适的句子分割符
+        if language == "ru":
+            # 俄语标点符号：句号、感叹号、问号、分号等
+            sentence_delimiters = r'[.!?;…]'
+            sentence_connector = '. '
         else:
-            # 如果无法识别结构，使用智能分段
-            sentences = re.split(r'[。！？.!?]', description)
-            sentences = [s.strip() for s in sentences if s.strip()]
-            
-            # 将句子分组为段落（不截断，让模型自由发挥）
-            paragraphs = []
-            current_para = []
-            for sentence in sentences:
-                current_para.append(sentence)
-                # 不进行截断，让模型生成的描述完整显示
-                # 只有当句子数量达到5个或当前段落长度超过200字符时，才考虑分段
-                if len(current_para) >= 5 or len(''.join(current_para)) > 200:
-                    paragraphs.append('。'.join(current_para) + '。')
-                    current_para = []
-            
-            if current_para:
-                paragraphs.append('。'.join(current_para) + '。')
-            
-            # 添加格式化后的段落
-            for i, para in enumerate(paragraphs):
-                if i == 0:
-                    story.append(safe_paragraph(f"▪️ {safe_text(t['introduction'])}", heading_style))
-                    story.append(Spacer(1, 4))
-                story.append(safe_paragraph(para, desc_style))
-                story.append(Spacer(1, 8))
+            # 中文标点符号
+            sentence_delimiters = r'[。！？.!?]'
+            sentence_connector = '。'
+        
+        # 将描述文本按句子分割
+        sentences = re.split(sentence_delimiters, description)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        # 将句子分组为段落，保持内容的连贯性
+        paragraphs = []
+        current_para = []
+        
+        for sentence in sentences:
+            current_para.append(sentence)
+            # 当段落达到一定长度或句子数量时，开始新段落
+            # 对于俄语，可能需要更长的段落长度
+            if len(current_para) >= 3 or len(''.join(current_para)) > (200 if language == "ru" else 150):
+                paragraphs.append(sentence_connector.join(current_para) + sentence_connector.strip())
+                current_para = []
+        
+        if current_para:
+            paragraphs.append(sentence_connector.join(current_para) + sentence_connector.strip())
+        
+        # 添加描述标题
+        story.append(safe_paragraph(f"▪️ {safe_text(t['description'])}", heading_style))
+        story.append(Spacer(1, 4))
+        
+        # 添加格式化后的段落
+        for para in paragraphs:
+            story.append(safe_paragraph(para, desc_style))
+            story.append(Spacer(1, 8))
 
 
     # 构建PDF文档
@@ -988,72 +970,94 @@ async def check_request_disconnected(fastapi_request: Request) -> bool:
 
 @app.post("/api/generate/character")
 async def generate_character(fastapi_request: Request, request: Union[CharacterGenRequest, SimpleCharacterRequest]):
-    # 支持两种请求格式：完整的角色属性或简单的描述文本
-    if hasattr(request, 'description') and not hasattr(request, 'gender'):
-        # 处理简单描述格式
-        simple_request = request
-        print(f"[角色生成] 处理简单描述请求: {simple_request.description[:50]}...")
-        
-        # 在关键步骤前检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        # 使用AI从描述中提取角色属性
-        extract_prompt = f"""
-        请从以下角色描述中提取关键属性，并以JSON格式返回：
-        {simple_request.description}
-        
-        需要提取的属性：
-        - gender: 性别（男/女）
-        - age: 年龄（如：25岁）
-        - height: 身高（如：175cm）
-        - weight: 体重（如：65kg）
-        - hair_color: 发色
-        - eye_color: 瞳色
-        - profession: 职业
-        - personality: 性格特点
-        - nationality: 国籍/地区
-        - fantasy_race: 奇幻种族（如：人类、精灵、矮人等，如果没有则留空）
-        
-        只返回JSON格式，不要其他内容。
-        """
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        extract_messages = build_spark_text_prompt(extract_prompt, "你是一个角色属性提取器。", simple_request.language)
-        extracted_data = get_spark_text_response(extract_messages)
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        # 尝试解析提取的数据
-        try:
-            import re
-            # 尝试从响应中提取JSON
-            json_match = re.search(r'\{.*\}', extracted_data, re.DOTALL)
-            if json_match:
-                extracted_json = json.loads(json_match.group())
-                # 使用提取的属性创建角色数据
-                character_data = {
-                    "name": "未知角色",
-                    "description": simple_request.description,
-                    "gender": extracted_json.get('gender', '未知'),
-                    "age": extracted_json.get('age', '未知'),
-                    "height": extracted_json.get('height', '未知'),
-                    "weight": extracted_json.get('weight', '未知'),
-                    "hair_color": extracted_json.get('hair_color', '未知'),
-                    "eye_color": extracted_json.get('eye_color', '未知'),
-                    "profession": extracted_json.get('profession', '未知'),
-                    "personality": extracted_json.get('personality', '未知'),
-                    "nationality": extracted_json.get('nationality', '未知'),
-                    "fantasy_race": extracted_json.get('fantasy_race', ''),
-                    "generated_at": datetime.now().isoformat()
-                }
-            else:
-                # 如果无法解析JSON，使用默认值
+    try:
+        # 支持两种请求格式：完整的角色属性或简单的描述文本
+        if hasattr(request, 'description') and not hasattr(request, 'gender'):
+            # 处理简单描述格式
+            simple_request = request
+            print(f"[角色生成] 处理简单描述请求: {simple_request.description[:50]}...")
+            
+            # 在关键步骤前检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 使用AI从描述中提取角色属性
+            extract_prompt = f"""
+            请从以下角色描述中提取关键属性，并以JSON格式返回：
+            {simple_request.description}
+            
+            需要提取的属性：
+            - gender: 性别（男/女）
+            - age: 年龄（如：25岁）
+            - height: 身高（如：175cm）
+            - weight: 体重（如：65kg）
+            - hair_color: 发色
+            - eye_color: 瞳色
+            - profession: 职业
+            - personality: 性格特点
+            - nationality: 国籍/地区
+            - fantasy_race: 奇幻种族（如：人类、精灵、矮人等，如果没有则留空）
+            
+            只返回JSON格式，不要其他内容。
+            """
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            extract_messages = build_spark_text_prompt(extract_prompt, "你是一个角色属性提取器。", simple_request.language)
+            extracted_data = get_spark_text_response(extract_messages)
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 如果API请求失败，返回错误
+            if not extracted_data or extracted_data == "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。":
+                return {"error": "AI服务暂时不可用，请稍后重试"}
+            
+            # 尝试解析提取的数据
+            try:
+                import re
+                # 尝试从响应中提取JSON
+                json_match = re.search(r'\{.*\}', extracted_data, re.DOTALL)
+                if json_match:
+                    extracted_json = json.loads(json_match.group())
+                    # 使用提取的属性创建角色数据
+                    character_data = {
+                        "name": "未知角色",
+                        "description": simple_request.description,
+                        "gender": extracted_json.get('gender', '未知'),
+                        "age": extracted_json.get('age', '未知'),
+                        "height": extracted_json.get('height', '未知'),
+                        "weight": extracted_json.get('weight', '未知'),
+                        "hair_color": extracted_json.get('hair_color', '未知'),
+                        "eye_color": extracted_json.get('eye_color', '未知'),
+                        "profession": extracted_json.get('profession', '未知'),
+                        "personality": extracted_json.get('personality', '未知'),
+                        "nationality": extracted_json.get('nationality', '未知'),
+                        "fantasy_race": extracted_json.get('fantasy_race', ''),
+                        "generated_at": datetime.now().isoformat()
+                    }
+                else:
+                    # 如果无法解析JSON，使用默认值
+                    character_data = {
+                        "name": "未知角色",
+                        "description": simple_request.description,
+                        "gender": "未知",
+                        "age": "未知",
+                        "height": "未知",
+                        "weight": "未知",
+                        "hair_color": "未知",
+                        "eye_color": "未知",
+                        "profession": "未知",
+                        "personality": "未知",
+                        "nationality": "未知",
+                        "fantasy_race": "",
+                        "generated_at": datetime.now().isoformat()
+                    }
+            except:
+                # 如果解析失败，使用默认值
                 character_data = {
                     "name": "未知角色",
                     "description": simple_request.description,
@@ -1069,137 +1073,168 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
                     "fantasy_race": "",
                     "generated_at": datetime.now().isoformat()
                 }
-        except:
-            # 如果解析失败，使用默认值
-            character_data = {
-                "name": "未知角色",
-                "description": simple_request.description,
-                "gender": "未知",
-                "age": "未知",
-                "height": "未知",
-                "weight": "未知",
-                "hair_color": "未知",
-                "eye_color": "未知",
-                "profession": "未知",
-                "personality": "未知",
-                "nationality": "未知",
-                "fantasy_race": "",
-                "generated_at": datetime.now().isoformat()
+            
+            # 1. 生成详细的角色描述文本（像完整格式那样）
+            if simple_request.language == "ru":
+                # 俄语提示词，使用俄语标点符号和表达方式
+                description_prompt = f"""
+                Создайте подробное описание персонажа, включающее следующую информацию:
+                - Имя и фамилию, соответствующие культуре {character_data.get('nationality', 'неизвестно')}
+                - Живое описание внешности и характера
+                - Фрагмент предыстории, соответствующий профессии и характеру
+                
+                Конкретные параметры:
+                Пол: {character_data.get('gender', 'неизвестно')}, Возраст: {character_data.get('age', 'неизвестно')}, Рост: {character_data.get('height', 'неизвестно')}, Вес: {character_data.get('weight', 'неизвестно')},
+                Цвет волос: {character_data.get('hair_color', 'неизвестно')}, Цвет глаз: {character_data.get('eye_color', 'неизвестно')}, Профессия: {character_data.get('profession', 'неизвестно')},
+                Характер: {character_data.get('personality', 'неизвестно')}, Фэнтези раса: {character_data.get('fantasy_race', 'человек')}.
+                """
+                system_role = "Ты дизайнер персонажей."
+            else:
+                # 中文提示词
+                description_prompt = f"""
+                请创建一个详细角色描述，包含以下信息：
+                - 一个符合{character_data.get('nationality', '未知')}文化的姓名（姓和名）
+                - 一段生动的外貌和性格描写
+                - 符合其职业和性格的背景故事片段
+                具体参数：
+                性别：{character_data.get('gender', '未知')}， 年龄：{character_data.get('age', '未知')}， 身高：{character_data.get('height', '未知')}， 体重：{character_data.get('weight', '未知')}，
+                发色：{character_data.get('hair_color', '未知')}， 瞳色：{character_data.get('eye_color', '未知')}， 职业：{character_data.get('profession', '未知')}，
+                性格：{character_data.get('personality', '未知')}， 奇幻种族：{character_data.get('fantasy_race', '人类')}。
+                """
+                system_role = "你是一个角色设计师。"
+            
+            description_messages = build_spark_text_prompt(description_prompt, system_role, simple_request.language)
+            character_description = get_spark_text_response(description_messages)
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 如果API请求失败，返回错误
+            if not character_description or character_description == "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。":
+                return {"error": "AI服务暂时不可用，请稍后重试"}
+            
+            if not character_description:
+                character_description = simple_request.description  # 如果生成失败，使用原始描述
+            
+            # 2. 提取姓名
+            name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
+            name_messages = build_spark_text_prompt(name_prompt, "", simple_request.language)
+            character_name = get_spark_text_response(name_messages).strip()
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 如果API请求失败，返回错误
+            if not character_name or character_name == "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。":
+                return {"error": "AI服务暂时不可用，请稍后重试"}
+            
+            if not character_name:
+                character_name = "未知角色"
+            
+            # 更新角色数据
+            character_data["name"] = character_name
+            character_data["description"] = character_description
+            
+            # 3. 生成角色图片
+            print(f"[角色生成] 尝试为简单描述生成图片...")
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 图像生成提示词强制使用中文，避免俄语文本导致API错误
+            # 如果角色名称包含非中文字符，使用默认名称
+            safe_character_name = character_name
+            # 检查名称是否包含俄语或其他非中文字符
+            import re
+            if re.search(r'[а-яА-Я]', character_name):  # 检测俄语字符
+                safe_character_name = "角色"
+                print(f"[角色生成] 检测到俄语名称，使用默认名称: {safe_character_name}")
+            
+            # 简化提示词，提高生成成功率
+            image_gen_prompt = f"""
+            全身肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
+            发色：{character_data.get('hair_color', '未知')}，瞳色：{character_data.get('eye_color', '未知')}，
+            职业：{character_data.get('profession', '未知')}，{character_data.get('nationality', '未知')}风格
+            """
+            image_path = call_tti_api(image_gen_prompt)
+            
+            # 如果图像生成失败，尝试使用更简单的提示词
+            if not image_path:
+                print("[角色生成] 第一次图像生成失败，尝试简化提示词...")
+                simple_prompt = f"角色肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('profession', '未知')}"
+                image_path = call_tti_api(simple_prompt)
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            if image_path:
+                print(f"[角色生成] 图片生成成功: {image_path}")
+            else:
+                print(f"[角色生成] 图片生成失败，将继续生成PDF")
+            
+            # 4. 生成PDF
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            pdf_path = generate_character_pdf(character_data, image_path, simple_request.language)
+            
+            return {
+                "character": character_data,
+                "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
+                "pdf_url": f"/file/{os.path.basename(pdf_path)}"
             }
         
-        # 1. 生成详细的角色描述文本（像完整格式那样）
-        description_prompt = f"""
-        请创建一个详细角色描述，包含以下信息：
-        - 一个符合{character_data.get('nationality', '未知')}文化的姓名（姓和名）
-        - 一段生动的外貌和性格描写
-        - 符合其职业和性格的背景故事片段
-        具体参数：
-        性别：{character_data.get('gender', '未知')}， 年龄：{character_data.get('age', '未知')}， 身高：{character_data.get('height', '未知')}， 体重：{character_data.get('weight', '未知')}，
-        发色：{character_data.get('hair_color', '未知')}， 瞳色：{character_data.get('eye_color', '未知')}， 职业：{character_data.get('profession', '未知')}，
-        性格：{character_data.get('personality', '未知')}， 奇幻种族：{character_data.get('fantasy_race', '人类')}。
-        """
-        description_messages = build_spark_text_prompt(description_prompt, "你是一个角色设计师。", simple_request.language)
-        character_description = get_spark_text_response(description_messages)
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        if not character_description:
-            character_description = simple_request.description  # 如果生成失败，使用原始描述
-        
-        # 2. 提取姓名
-        name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
-        name_messages = build_spark_text_prompt(name_prompt, "", simple_request.language)
-        character_name = get_spark_text_response(name_messages).strip()
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        if not character_name:
-            character_name = "未知角色"
-        
-        # 更新角色数据
-        character_data["name"] = character_name
-        character_data["description"] = character_description
-        
-        # 3. 生成角色图片
-        print(f"[角色生成] 尝试为简单描述生成图片...")
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        # 图像生成提示词强制使用中文，避免俄语文本导致API错误
-        # 如果角色名称包含非中文字符，使用默认名称
-        safe_character_name = character_name
-        # 检查名称是否包含俄语或其他非中文字符
-        import re
-        if re.search(r'[а-яА-Я]', character_name):  # 检测俄语字符
-            safe_character_name = "角色"
-            print(f"[角色生成] 检测到俄语名称，使用默认名称: {safe_character_name}")
-        
-        # 简化提示词，提高生成成功率
-        image_gen_prompt = f"""
-        全身肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('age', '未知')}，
-        发色：{character_data.get('hair_color', '未知')}，瞳色：{character_data.get('eye_color', '未知')}，
-        职业：{character_data.get('profession', '未知')}，{character_data.get('nationality', '未知')}风格
-        """
-        image_path = call_tti_api(image_gen_prompt)
-        
-        # 如果图像生成失败，尝试使用更简单的提示词
-        if not image_path:
-            print("[角色生成] 第一次图像生成失败，尝试简化提示词...")
-            simple_prompt = f"角色肖像，{safe_character_name}，{character_data.get('gender', '未知')}，{character_data.get('profession', '未知')}"
-            image_path = call_tti_api(simple_prompt)
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        if image_path:
-            print(f"[角色生成] 图片生成成功: {image_path}")
         else:
-            print(f"[角色生成] 图片生成失败，将继续生成PDF")
-        
-        # 4. 生成PDF
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        pdf_path = generate_character_pdf(character_data, image_path, simple_request.language)
-        
-        return {
-            "character": character_data,
-            "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
-            "pdf_url": f"/file/{os.path.basename(pdf_path)}"
-        }
-    
-    else:
-        # 处理完整的角色属性格式（原有逻辑）
-        print(f"[角色生成] 开始处理请求: {request.nationality} {request.profession}")
-        
-        # 1. 生成角色描述文本
-        prompt = f"""
-        请创建一个详细角色描述，包含以下信息：
-        - 一个符合{request.nationality}文化的姓名（姓和名）
-        - 一段生动的外貌和性格描写
-        - 符合其职业和性格的背景故事片段
-        具体参数：
-        性别：{request.gender}， 年龄：{request.age}， 身高：{request.height}， 体重：{request.weight}，
-        发色：{request.hair_color}， 瞳色：{request.eye_color}， 职业：{request.profession}，
-        性格：{request.personality}， 奇幻种族：{request.fantasy_race if request.fantasy_race else '人类'}。
-        """
-        messages = build_spark_text_prompt(prompt, "你是一个角色设计师。", request.language)
-        character_description = get_spark_text_response(messages)
-        
-        # 检查请求是否中止
-        if await check_request_disconnected(fastapi_request):
-            return {"error": "请求已被中止"}
-        
-        if not character_description:
-            raise HTTPException(status_code=500, detail="生成角色描述失败")
+            # 处理完整的角色属性格式（原有逻辑）
+            print(f"[角色生成] 开始处理请求: {request.nationality} {request.profession}")
+            
+            # 1. 生成角色描述文本
+            if request.language == "ru":
+                # 俄语提示词，使用俄语标点符号和表达方式
+                prompt = f"""
+                Создайте подробное описание персонажа, включающее следующую информацию:
+                - Имя и фамилию, соответствующие культуре {request.nationality}
+                - Живое описание внешности и характера
+                - Фрагмент предыстории, соответствующий профессии и характеру
+                
+                Конкретные параметры:
+                Пол: {request.gender}, Возраст: {request.age}, Рост: {request.height}, Вес: {request.weight},
+                Цвет волос: {request.hair_color}, Цвет глаз: {request.eye_color}, Профессия: {request.profession},
+                Характер: {request.personality}, Фэнтези раса: {request.fantasy_race if request.fantasy_race else 'человек'}.
+                """
+                system_role = "Ты дизайнер персонажей."
+            else:
+                # 中文提示词
+                prompt = f"""
+                请创建一个详细角色描述，包含以下信息：
+                - 一个符合{request.nationality}文化的姓名（姓和名）
+                - 一段生动的外貌和性格描写
+                - 符合其职业和性格的背景故事片段
+                具体参数：
+                性别：{request.gender}， 年龄：{request.age}， 身高：{request.height}， 体重：{request.weight}，
+                发色：{request.hair_color}， 瞳色：{request.eye_color}， 职业：{request.profession}，
+                性格：{request.personality}， 奇幻种族：{request.fantasy_race if request.fantasy_race else '人类'}。
+                """
+                system_role = "你是一个角色设计师。"
+            
+            messages = build_spark_text_prompt(prompt, system_role, request.language)
+            character_description = get_spark_text_response(messages)
+            
+            # 检查请求是否中止
+            if await check_request_disconnected(fastapi_request):
+                return {"error": "请求已被中止"}
+            
+            # 如果API请求失败，返回错误
+            if not character_description or character_description == "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。":
+                return {"error": "AI服务暂时不可用，请稍后重试"}
+            
+            if not character_description:
+                raise HTTPException(status_code=500, detail="生成角色描述失败")
 
         # 2. 提取姓名
         name_prompt = f"从以下描述中提取角色的完整姓名（姓和名），只返回姓名，不要其他内容：{character_description[:200]}"
@@ -1209,6 +1244,10 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         # 检查请求是否中止
         if await check_request_disconnected(fastapi_request):
             return {"error": "请求已被中止"}
+        
+        # 如果API请求失败，返回错误
+        if not character_name or character_name == "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。":
+            return {"error": "AI服务暂时不可用，请稍后重试"}
         
         if not character_name:
             character_name = "未知角色"
@@ -1284,6 +1323,12 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
             "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
             "pdf_url": f"/file/{os.path.basename(pdf_path)}"
         }
+    
+    except Exception as e:
+        print(f"[角色生成] 全局异常: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"error": f"角色生成失败: {str(e)}"}
 
 @app.post("/api/generate/booktitle")
 async def generate_book_title(request: BookTitleGenRequest):
