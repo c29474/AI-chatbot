@@ -19,8 +19,3 @@
 ✅ APIKey: 21aca9874cfd4465704c1a1498e2f931
 ✅ APISecret: NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk
 
-Chatbot/
-├── main.py          # 后端API服务器
-├── index.html       # 前端网页界面
-├── test_image_api.py # 图像API测试脚本
-└── temp_files/      # 临时文件目录
