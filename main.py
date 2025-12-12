@@ -268,8 +268,9 @@ def get_spark_text_response(messages: list) -> str:
         wst.daemon = True
         wst.start()
         
-        if not response_received.wait(timeout=30):
-            print("[超时] 未在30秒内收到完整响应")
+        # 增加超时时间，因为生成角色描述可能需要更长时间
+        if not response_received.wait(timeout=60):
+            print("[超时] 未在60秒内收到完整响应")
             return "抱歉，AI响应超时，请稍后重试或尝试简化您的请求。"
         
         return full_response.strip()
@@ -970,6 +971,8 @@ async def check_request_disconnected(fastapi_request: Request) -> bool:
 
 @app.post("/api/generate/character")
 async def generate_character(fastapi_request: Request, request: Union[CharacterGenRequest, SimpleCharacterRequest]):
+    print(f"[角色生成] ========== 开始处理角色生成请求 ==========")
+    print(f"[角色生成] 请求时间: {datetime.now().isoformat()}")
     try:
         # 支持两种请求格式：完整的角色属性或简单的描述文本
         if hasattr(request, 'description') and not hasattr(request, 'gender'):
@@ -1185,8 +1188,8 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
             
             return {
                 "character": character_data,
-                "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
-                "pdf_url": f"/file/{os.path.basename(pdf_path)}"
+                "image_url": f"/api/file/{os.path.basename(image_path)}" if image_path else None,
+                "pdf_url": f"/api/file/{os.path.basename(pdf_path)}"
             }
         
         else:
@@ -1318,17 +1321,28 @@ async def generate_character(fastapi_request: Request, request: Union[CharacterG
         
         pdf_path = generate_character_pdf(character_data, image_path, request.language)
         
+        print(f"[角色生成] ========== 角色生成完成 ==========")
+        print(f"[角色生成] 完成时间: {datetime.now().isoformat()}")
+        print(f"[角色生成] 返回数据: character={character_data.get('name')}, image={image_path is not None}, pdf={pdf_path}")
+        
         return {
             "character": character_data,
-            "image_url": f"/file/{os.path.basename(image_path)}" if image_path else None,
-            "pdf_url": f"/file/{os.path.basename(pdf_path)}"
+            "image_url": f"/api/file/{os.path.basename(image_path)}" if image_path else None,
+            "pdf_url": f"/api/file/{os.path.basename(pdf_path)}"
         }
     
     except Exception as e:
         print(f"[角色生成] 全局异常: {e}")
         import traceback
         traceback.print_exc()
-        return {"error": f"角色生成失败: {str(e)}"}
+        error_message = str(e)
+        # 如果是超时错误，提供更友好的提示
+        if "timeout" in error_message.lower() or "timed out" in error_message.lower():
+            return {"error": "请求处理超时，生成图片和PDF需要较长时间，请稍后重试或简化请求"}
+        # 如果是网络错误
+        if "connection" in error_message.lower() or "network" in error_message.lower():
+            return {"error": "网络连接错误，请检查网络连接后重试"}
+        return {"error": f"角色生成失败: {error_message}"}
 
 @app.post("/api/generate/booktitle")
 async def generate_book_title(request: BookTitleGenRequest):
@@ -1372,11 +1386,45 @@ async def generate_name(nationality: str, fantasy_type: Optional[str] = None, la
         "full_response": result
     }
 
-@app.get("/file/{filename}")
+@app.get("/api/file/{filename}")
 async def get_file(filename: str):
     file_path = os.path.join(TEMP_FILE_DIR, filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path)
+        # 根据文件扩展名设置正确的媒体类型
+        media_type = None
+        if filename.lower().endswith('.pdf'):
+            media_type = 'application/pdf'
+        elif filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+            # 图片类型，让浏览器自动检测
+            if filename.lower().endswith('.png'):
+                media_type = 'image/png'
+            elif filename.lower().endswith(('.jpg', '.jpeg')):
+                media_type = 'image/jpeg'
+            elif filename.lower().endswith('.gif'):
+                media_type = 'image/gif'
+            elif filename.lower().endswith('.webp'):
+                media_type = 'image/webp'
+        
+        # 添加更多安全头部信息以提高浏览器兼容性
+        response_headers = {
+            "Content-Disposition": f"inline; filename={filename}",
+            "Cache-Control": "public, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "SAMEORIGIN"
+        }
+        
+        # 对于PDF文件，添加特定的头部信息
+        if filename.lower().endswith('.pdf'):
+            response_headers.update({
+                "Content-Security-Policy": "frame-ancestors 'self' http://localhost:* https://localhost:*",
+                "X-Robots-Tag": "noindex, nofollow"
+            })
+        
+        return FileResponse(
+            file_path,
+            media_type=media_type,
+            headers=response_headers
+        )
     raise HTTPException(status_code=404, detail="文件未找到")
 
 if __name__ == "__main__":
@@ -1387,4 +1435,4 @@ if __name__ == "__main__":
     print(f"临时文件目录: {TEMP_FILE_DIR}")
     print("=" * 50)
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

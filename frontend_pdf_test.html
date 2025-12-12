@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend PDF Test</title>
+    <style>
+        .pdf-container {
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .pdf-header {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .pdf-viewer {
+            width: 100%;
+            min-height: 500px;
+            height: 600px;
+            border: none;
+            display: block;
+            background: #f5f5f5;
+        }
+        
+        .pdf-error {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Frontend PDF Display Test</h1>
+    <button onclick="simulateCharacterGeneration()">Generate Character</button>
+    <div id="chat-window"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8002/api';
+        const FILE_BASE = 'http://localhost:8002';
+        
+        function addMessage(content) {
+            const chatWindow = document.getElementById('chat-window');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = content;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+        
+        function simulateCharacterGeneration() {
+            // Clear previous messages
+            document.getElementById('chat-window').innerHTML = '';
+            
+            // Show loading message
+            addMessage('⏳ Generating character...');
+            
+            // Simulate the PDF display logic from script.js
+            const pdfUrl = '/api/file/09800861-b55c-4b14-94d6-6ad54d08c47b.pdf';
+            const fullPdfUrl = `${FILE_BASE}${pdfUrl}`;
+            
+            console.log('[Display PDF] Full URL:', fullPdfUrl);
+            const pdfId = 'pdf-' + Date.now();
+            const pdfHtml = `<div class="pdf-container" id="${pdfId}">
+                <div class="pdf-header">
+                    <a href="${fullPdfUrl}" class="download-link" target="_blank" download>
+                        📥 Download PDF
+                    </a>
+                </div>
+                <iframe src="${fullPdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="pdf-viewer" frameborder="0" 
+                        onload="console.log('PDF iframe loaded successfully:', this.src)"
+                        onerror="console.error('PDF iframe failed to load:', this.src); this.onerror=null; const errorDiv = this.parentElement.querySelector('.pdf-error'); if(errorDiv) errorDiv.style.display='block';"
+                        title="PDF Preview">
+                </iframe>
+                <div class="pdf-error" style="display: none; padding: 20px; text-align: center; color: #666;">
+                    PDF failed to load, please click the download button above
+                </div>
+            </div>`;
+            
+            addMessage(pdfHtml);
+            
+            // Add special handling for Chrome browser
+            setTimeout(() => {
+                const pdfContainer = document.getElementById(pdfId);
+                if (pdfContainer) {
+                    const iframe = pdfContainer.querySelector('iframe');
+                    if (iframe) {
+                        // Add extra error detection
+                        iframe.addEventListener('load', function() {
+                            console.log('PDF iframe loaded event fired');
+                        });
+                        
+                        iframe.addEventListener('error', function(e) {
+                            console.error('PDF iframe error event:', e);
+                            const errorDiv = pdfContainer.querySelector('.pdf-error');
+                            if (errorDiv) {
+                                errorDiv.style.display = 'block';
+                            }
+                        });
+                    }
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

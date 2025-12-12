@@ -1,5 +1,4 @@
-const API_BASE = 'http://localhost:8002/api';
-const FILE_BASE = 'http://localhost:8002';
+const API_BASE = 'http://localhost:8002';
 let currentLanguage = 'ru';
 let messageHistory = [];
 let currentRequestController = null; // 用于中止当前请求
@@ -7,33 +6,26 @@ let isGenerating = false; // 标记是否正在生成
 
 // 页面初始化
 function initializePage() {
-    try {
-        // 设置语言选择器
-        const langSelect = document.getElementById('lang');
-        if (langSelect) {
-            langSelect.value = currentLanguage;
-        }
-        
-        // 更新界面文本
-        updateUI();
-        
-        // 生成欢迎消息
-        generateWelcomeMessage();
-        
-        // 更新快速操作按钮
-        updateQuickActions();
-        
-        // 更新预设角色按钮
-        updatePresetButtons();
-        
-        // 更新角色生成表单
-        updateCharacterForm();
-        
-        // 加载聊天历史
-        loadChatHistory();
-    } catch (error) {
-        console.error('[初始化] 错误:', error);
-    }
+    // 设置语言选择器
+    document.getElementById('lang').value = currentLanguage;
+    
+    // 更新界面文本
+    updateUI();
+    
+    // 生成欢迎消息
+    generateWelcomeMessage();
+    
+    // 更新快速操作按钮
+    updateQuickActions();
+    
+    // 更新预设角色按钮
+    updatePresetButtons();
+    
+    // 更新角色生成表单
+    updateCharacterForm();
+    
+    // 加载聊天历史
+    loadChatHistory();
 }
 
 // 更新界面文本
@@ -1378,58 +1370,57 @@ async function generateCustomCharacter() {
     try {
         const response = await callApi('generate/character', 'POST', request);
         
-        // 调试：打印完整响应
-        console.log('[角色生成] 完整响应:', response);
-        
-        // 检查响应是否有效
-        if (!response) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色失败：未收到响应' : 'Ошибка создания персонажа: ответ не получен'}`);
-            return;
-        }
-        
         if (response.error) {
             addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
-            return;
+        } else {
+            const character = response.character;
+            
+            // Отладка: вывод данных ответа
+            console.log('Создание персонажа:', response);
+            
+            // Проверка наличия объекта character
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? 'Роль не создана: неверный формат данных' : 'Ошибка создания персонажа: неверный формат данных'}`);
+                return;
+            }
+            
+                    let resultText = currentLanguage === 'zh' ?
+                        `🎨 <strong>角色生成成功！</strong><br>
+                         👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                        `🎨 <strong>Персонаж создан успешно！</strong><br>
+                         👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+            
+            // Добавление ссылки для скачивания PDF
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">（PDF生成失败）</span>` :
+                    `<span style="color: #666;">（PDF не создан）</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // Добавление изображения
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
+                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                }, 100);
+            }
         }
-        
-        const character = response.character;
-        console.log('[角色生成] image_url:', response.image_url);
-        console.log('[角色生成] pdf_url:', response.pdf_url);
-        console.log('[角色生成] character对象:', character);
-        
-        // Проверка наличия объекта character
-        if (!character) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? 'Роль не создана: неверный формат данных' : 'Ошибка создания персонажа: неверный формат данных'}`);
-            return;
-        }
-        
-        let resultText = currentLanguage === 'zh' ?
-            `🎨 <strong>角色生成成功！</strong><br>
-             👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-             📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
-            `🎨 <strong>Персонаж создан успешно！</strong><br>
-             👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-             📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
-        
-        addMessage(resultText);
-        
-        // 使用统一函数显示图片和PDF
-        setTimeout(() => {
-            displayImageAndPDF(response.image_url, response.pdf_url);
-        }, 100);
     } catch (error) {
-        console.error('[生成自定义角色] 错误:', error);
-        let errorMessage = error.message || error.toString();
-        
-        // 如果error是对象且有error属性，使用它
-        if (error && typeof error === 'object' && error.error) {
-            errorMessage = error.error;
-        }
-        
-        addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色失败：' : 'Ошибка создания персонажа：'} ${errorMessage}`);
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос не удался：' : 'Запрос не удался：'} ${error.message}`);
     } finally {
-        // 隐藏停止按钮，显示发送按钮
-        toggleButtons(false);
         hideTypingIndicator();
     }
 }
@@ -1609,39 +1600,51 @@ async function generateRandomCharacter() {
     try {
         const response = await callApi('generate/character', 'POST', randomRequest);
         
-        // 检查响应是否有效
-        if (!response) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色失败：未收到响应' : 'Ошибка создания персонажа: ответ не получен'}`);
-            return;
-        }
-        
         if (response.error) {
             addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
-            return;
+        } else {
+            const character = response.character;
+            
+            // 检查character对象是否存在
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                return;
+            }
+            
+            let resultText = currentLanguage === 'zh' ?
+                `🎨 <strong>随机角色生成成功！</strong><br>
+                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                `🎨 <strong>Случайный персонаж создан успешно！</strong><br>
+                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+            
+            // 添加PDF下载链接
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">（PDF生成失败）</span>` :
+                    `<span style="color: #666;">（PDF не создан）</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // 添加图片显示
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
+                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                }, 100);
+            }
         }
-        
-        const character = response.character;
-        
-        // 检查character对象是否存在
-        if (!character) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
-            return;
-        }
-        
-        let resultText = currentLanguage === 'zh' ?
-            `🎨 <strong>随机角色生成成功！</strong><br>
-             👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-             📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
-            `🎨 <strong>Случайный персонаж создан успешно！</strong><br>
-             👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-             📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
-        
-        addMessage(resultText);
-        
-        // 使用统一函数显示图片和PDF
-        setTimeout(() => {
-            displayImageAndPDF(response.image_url, response.pdf_url);
-        }, 100);
     } catch (error) {
         addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
     } finally {
@@ -1672,42 +1675,48 @@ async function generateCharacterFromPreset(presetKey) {
             language: currentLanguage
         });
         
-        // 检查响应是否有效
-        if (!response) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色失败：未收到响应' : 'Ошибка создания персонажа: ответ не получен'}`);
-            return;
-        }
-        
         if (response.error) {
             addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
-            return;
+        } else {
+            const character = response.character;
+            
+            // 调试：打印响应数据
+            console.log('角色生成响应:', response);
+            
+            let resultText = currentLanguage === 'zh' ?
+                `🎨 <strong>角色生成成功！</strong><br>
+                 👤 <strong>姓名：</strong>${character.name}<br>
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                `🎨 <strong>Персонаж создан успешно！</strong><br>
+                 👤 <strong>Имя：</strong>${character.name}<br>
+                 📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
+            
+            // 添加PDF下载链接
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">（PDF生成失败）</span>` :
+                    `<span style="color: #666;">（PDF не создан）</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // 添加图片显示
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">（图片生成失败）</span>` :
+                        `🖼️ <span style="color: #666;">（Изображение не создано）</span>`);
+                }, 100);
+            }
         }
-        
-        const character = response.character;
-        
-        // 调试：打印响应数据
-        console.log('角色生成响应:', response);
-        
-        // 检查character对象是否存在
-        if (!character) {
-            addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
-            return;
-        }
-        
-        let resultText = currentLanguage === 'zh' ?
-            `🎨 <strong>角色生成成功！</strong><br>
-             👤 <strong>姓名：</strong>${character.name}<br>
-             📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
-            `🎨 <strong>Персонаж создан успешно！</strong><br>
-             👤 <strong>Имя：</strong>${character.name}<br>
-             📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
-        
-        addMessage(resultText);
-        
-        // 使用统一函数显示图片和PDF
-        setTimeout(() => {
-            displayImageAndPDF(response.image_url, response.pdf_url);
-        }, 100);
     } catch (error) {
         addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
     } finally {
@@ -1720,7 +1729,12 @@ function handlePresetClick(presetKey) {
     generateCharacterFromPreset(presetKey);
 }
 
-// 注意：handleKeyPress函数在后面定义（第2149行），这里删除重复定义
+// 处理按键事件
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendMessage();
+    }
+}
 
 // 添加消息到聊天窗口
 function addMessage(content, isUser = false) {
@@ -1751,75 +1765,6 @@ function addMessage(content, isUser = false) {
     autoSaveChatHistory();
 }
 
-// 统一的函数：显示图片和PDF
-function displayImageAndPDF(imageUrl, pdfUrl) {
-    console.log('[显示媒体] imageUrl:', imageUrl, 'pdfUrl:', pdfUrl);
-    
-    // 显示图片
-    if (imageUrl) {
-        const fullImageUrl = `${FILE_BASE}${imageUrl}`;
-        console.log('[显示图片] 完整URL:', fullImageUrl);
-        const imageHtml = `<div class="media-container">
-            <img src="${fullImageUrl}" class="character-image" alt="${currentLanguage === 'zh' ? '生成的角色图片' : 'Сгенерированное изображение персонажа'}" 
-                 onerror="console.error('图片加载失败:', this.src); this.onerror=null; this.parentElement.innerHTML='<span style=\\'color: #666;\\'>${currentLanguage === 'zh' ? '（图片加载失败，可能已过期）' : '（Изображение не загружено, возможно устарело）'}</span>'"
-                 onload="console.log('图片加载成功:', this.src)"
-                 loading="lazy">
-        </div>`;
-        addMessage(imageHtml);
-    } else {
-        console.log('[显示图片] 图片URL为空');
-        addMessage(`🖼️ <span style="color: #666;">${currentLanguage === 'zh' ? '（图片生成失败）' : '（Изображение не создано）'}</span>`);
-    }
-    
-    // 显示PDF（在聊天窗口中嵌入）
-    if (pdfUrl) {
-        const fullPdfUrl = `${FILE_BASE}${pdfUrl}`;
-        console.log('[显示PDF] 完整URL:', fullPdfUrl);
-        const pdfId = 'pdf-' + Date.now();
-        const pdfHtml = `<div class="pdf-container" id="${pdfId}">
-            <div class="pdf-header">
-                <a href="${fullPdfUrl}" class="download-link" target="_blank" download>
-                    📥 ${currentLanguage === 'zh' ? '下载PDF档案' : 'Скачать PDF'}
-                </a>
-            </div>
-            <iframe src="${fullPdfUrl}#toolbar=0&navpanes=0&scrollbar=0" class="pdf-viewer" frameborder="0" 
-                    onload="console.log('PDF iframe加载成功:', this.src)"
-                    onerror="console.error('PDF iframe加载失败:', this.src); this.onerror=null; const errorDiv = this.parentElement.querySelector('.pdf-error'); if(errorDiv) errorDiv.style.display='block';"
-                    title="${currentLanguage === 'zh' ? 'PDF预览' : 'PDF Preview'}">
-            </iframe>
-            <div class="pdf-error" style="display: none; padding: 20px; text-align: center; color: #666;">
-                ${currentLanguage === 'zh' ? 'PDF加载失败，请点击上方下载按钮' : 'PDF не загружен, пожалуйста, нажмите кнопку загрузки выше'}
-            </div>
-        </div>`;
-        addMessage(pdfHtml);
-        
-        // 为Chrome浏览器添加特殊处理
-        setTimeout(() => {
-            const pdfContainer = document.getElementById(pdfId);
-            if (pdfContainer) {
-                const iframe = pdfContainer.querySelector('iframe');
-                if (iframe) {
-                    // 添加额外的错误检测
-                    iframe.addEventListener('load', function() {
-                        console.log('PDF iframe loaded event fired');
-                    });
-                    
-                    iframe.addEventListener('error', function(e) {
-                        console.error('PDF iframe error event:', e);
-                        const errorDiv = pdfContainer.querySelector('.pdf-error');
-                        if (errorDiv) {
-                            errorDiv.style.display = 'block';
-                        }
-                    });
-                }
-            }
-        }, 100);
-    } else {
-        console.log('[显示PDF] PDF URL为空');
-        addMessage(`📄 <span style="color: #666;">${currentLanguage === 'zh' ? '（PDF生成失败）' : '（PDF не создан）'}</span>`);
-    }
-}
-
 // 显示输入指示器
 function showTypingIndicator() {
     const messagesDiv = document.getElementById('chatMessages');
@@ -1839,7 +1784,22 @@ function hideTypingIndicator() {
     }
 }
 
-// 注意：callApi函数在下面定义（第1920行），支持AbortController和超时处理
+// API调用函数
+async function callApi(endpoint, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+    };
+    if (data) options.body = JSON.stringify(data);
+    
+    try {
+        const response = await fetch(`${API_BASE}/${endpoint}`, options);
+        return await response.json();
+    } catch (error) {
+        console.error('API调用错误:', error);
+        return { error: error.message };
+    }
+}
 
 // 命令识别函数
 function parseCommand(message) {
@@ -1958,22 +1918,11 @@ function toggleButtons(showStop) {
     }
 }
 
-// API调用函数 - 支持中止和超时处理
+// 修改API调用函数以支持中止
 async function callApi(endpoint, method = 'GET', data = null) {
     // 创建新的AbortController
     currentRequestController = new AbortController();
     isGenerating = true;
-    
-    // 根据端点设置不同的超时时间
-    // 生成角色（包含图片和PDF）需要更长时间
-    // 图像生成可能需要60-120秒，加上文本生成和PDF生成，总共可能需要3-5分钟
-    const timeoutDuration = endpoint.includes('generate/character') ? 300000 : 60000; // 5分钟或1分钟
-    const timeoutId = setTimeout(() => {
-        if (currentRequestController) {
-            console.log(`[API调用] 请求超时 (${timeoutDuration}ms): ${endpoint}`);
-            currentRequestController.abort();
-        }
-    }, timeoutDuration);
     
     try {
         const options = {
@@ -1988,97 +1937,19 @@ async function callApi(endpoint, method = 'GET', data = null) {
             options.body = JSON.stringify(data);
         }
         
-        console.log(`[API调用] 发送请求: ${method} ${API_BASE}/${endpoint}`);
-        console.log(`[API调用] 请求数据:`, data ? JSON.stringify(data).substring(0, 200) : '无数据');
-        console.log(`[API调用] 超时设置: ${timeoutDuration}ms (${timeoutDuration/1000}秒)`);
-        
-        const startTime = Date.now();
         const response = await fetch(`${API_BASE}/${endpoint}`, options);
-        const elapsedTime = Date.now() - startTime;
-        
-        // 清除超时定时器
-        clearTimeout(timeoutId);
-        
-        console.log(`[API调用] 收到响应，耗时: ${elapsedTime}ms, 状态: ${response.status}`);
         
         if (!response.ok) {
-            let errorText = '';
-            try {
-                errorText = await response.text();
-            } catch (e) {
-                errorText = `无法读取错误信息: ${e.message}`;
-            }
-            console.error(`[API调用] HTTP错误 ${response.status}:`, errorText);
-            
-            // 尝试解析为JSON
-            let errorData = null;
-            try {
-                errorData = JSON.parse(errorText);
-            } catch (e) {
-                // 不是JSON格式，使用原始文本
-            }
-            
-            const errorMsg = errorData && errorData.error ? errorData.error : errorText.substring(0, 200);
-            throw new Error(`HTTP错误 ${response.status}: ${errorMsg}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const result = await response.json();
-        console.log(`[API调用] 请求成功: ${endpoint}`, {
-            hasCharacter: !!result.character,
-            hasImageUrl: !!result.image_url,
-            hasPdfUrl: !!result.pdf_url,
-            fullResult: result
-        });
         return result;
     } catch (error) {
-        // 清除超时定时器
-        clearTimeout(timeoutId);
-        
         if (error.name === 'AbortError') {
-            console.log('[API调用] 请求已被中止');
-            return { error: currentLanguage === 'zh' ? '请求已中止' : 'Запрос был прерван' };
+            console.log('请求已被中止');
+            return { error: '请求已中止' };
         }
-        
-        // 处理网络错误
-        if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message.includes('fetch')) {
-            console.error('[API调用] 网络错误详情:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack,
-                endpoint: endpoint
-            });
-            
-            // 检查是否是超时导致的
-            const isTimeout = error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('aborted');
-            
-            if (isTimeout && endpoint.includes('generate/character')) {
-                const errorMsg = currentLanguage === 'zh' 
-                    ? '请求超时（已等待5分钟）。生成角色、图片和PDF需要较长时间，请：\n1. 检查后端控制台是否还在处理\n2. 稍后重试\n3. 或尝试简化角色描述'
-                    : 'Время ожидания истекло (ожидание 5 минут). Генерация персонажа, изображения и PDF занимает много времени, пожалуйста:\n1. Проверьте, обрабатывает ли сервер запрос в консоли\n2. Попробуйте позже\n3. Или упростите описание персонажа';
-                return { error: errorMsg };
-            }
-            
-            // 尝试检查后端服务是否可达
-            try {
-                const testController = new AbortController();
-                const testTimeout = setTimeout(() => testController.abort(), 3000);
-                const testResponse = await fetch(`${API_BASE.replace('/api', '')}/docs`, { 
-                    method: 'HEAD', 
-                    signal: testController.signal 
-                });
-                clearTimeout(testTimeout);
-                console.log('[API调用] 后端服务可达，状态:', testResponse.status);
-            } catch (testError) {
-                console.error('[API调用] 后端服务不可达:', testError);
-            }
-            
-            const errorMsg = currentLanguage === 'zh' 
-                ? '网络连接失败，请检查：\n1. 后端服务是否运行在 http://localhost:8002\n2. 网络连接是否正常\n3. 请求可能超时（生成图片和PDF需要较长时间）\n\n提示：查看后端控制台日志了解处理进度'
-                : 'Ошибка сети, проверьте:\n1. Запущен ли сервер на http://localhost:8002\n2. Нормальное ли соединение\n3. Возможно истекло время ожидания (генерация изображений и PDF занимает много времени)\n\nПодсказка: проверьте логи сервера для понимания прогресса';
-            return { error: errorMsg };
-        }
-        
-        console.error('[API调用] 其他错误:', error);
         throw error;
     } finally {
         currentRequestController = null;
@@ -2130,39 +2001,35 @@ async function sendMessage() {
                     language: currentLanguage
                 });
                 
-                // 检查响应是否有效
-                if (!response) {
-                    addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色失败：未收到响应' : 'Ошибка создания персонажа: ответ не получен'}`);
-                    break;
-                }
-                
                 if (response.error) {
                     addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
-                    break;
+                } else {
+                    const character = response.character;
+                    
+                    // 检查character对象是否存在
+                    if (!character) {
+                        addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                        return;
+                    }
+                    
+                    let resultText = currentLanguage === 'zh' ?
+                        `🎨 <strong>角色生成成功！</strong><br>
+                         👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                         📝 <strong>描述：</strong>${character.description || '无描述'}<br>
+                         <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 下载PDF档案</a>` :
+                        `🎨 <strong>Персонаж создан успешно！</strong><br>
+                         👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                         📝 <strong>Описание：</strong>${character.description || '无描述'}<br>
+                         <a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+                    
+                    addMessage(resultText);
+                    
+                    if (response.image_url) {
+                        setTimeout(() => {
+                            addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="生成的角色图片">`);
+                        }, 100);
+                    }
                 }
-                
-                const character = response.character;
-                
-                // 检查character对象是否存在
-                if (!character) {
-                    addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
-                    break;
-                }
-                
-                let resultText = currentLanguage === 'zh' ?
-                    `🎨 <strong>角色生成成功！</strong><br>
-                     👤 <strong>姓名：</strong>${character.name || '未知'}<br>
-                     📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
-                    `🎨 <strong>Персонаж создан успешно！</strong><br>
-                     👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
-                     📝 <strong>Описание：</strong>${character.description || '无描述'}<br>`;
-                
-                addMessage(resultText);
-                
-                // 使用统一函数显示图片和PDF
-                setTimeout(() => {
-                    displayImageAndPDF(response.image_url, response.pdf_url);
-                }, 100);
                 break;
                 
 
@@ -2202,19 +2069,35 @@ async function sendMessage() {
                 break;
         }
     } catch (error) {
-        console.error('[发送消息] 错误:', error);
-        let errorMessage = error.message;
-        
-        // 如果error是对象且有error属性，使用它
-        if (error && typeof error === 'object' && error.error) {
-            errorMessage = error.error;
-        }
-        
-        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${errorMessage}`);
+        addMessage(`❌ ${currentLanguage === 'zh' ? '请求失败：' : 'Запрос не удался：'} ${error.message}`);
     } finally {
         // 隐藏停止按钮，显示发送按钮
         toggleButtons(false);
         hideTypingIndicator();
+    }
+}
+
+// 初始化
+function init() {
+    // 首先更新UI元素
+    updateUI();
+    updateQuickActions();
+    updatePresetButtons();
+    updateCharacterForm();
+    
+    // 然后加载保存的对话历史
+    loadChatHistory();
+    
+    // 如果没有历史记录，添加欢迎消息
+    if (messageHistory.length === 0) {
+        setTimeout(() => {
+            const t = translations[currentLanguage];
+            addMessage(`💡 <strong>${t.usageTips.title}</strong><br>
+                • ${t.usageTips.character}<br>
+                • ${t.usageTips.name}<br>
+                • ${t.usageTips.book}<br>
+                • ${t.usageTips.chat}`);
+        }, 1000);
     }
 }
 
@@ -2225,5 +2108,259 @@ function handleKeyPress(event) {
     }
 }
 
-// 注意：generateCustomCharacter 和 generateRandomCharacter 函数已在前面定义（第1144行和第1511行）
-// 这里删除重复定义，避免覆盖前面的完整版本
+// 修改自定义角色生成函数以支持停止功能
+async function generateCustomCharacter() {
+    // 获取表单值，处理自定义输入
+    const getFieldValue = (selectId, inputId) => {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        return select.value === 'custom' ? input.value : select.value;
+    };
+    
+    const request = {
+        gender: document.getElementById('customGender').value,
+        age: document.getElementById('customAge').value,
+        height: document.getElementById('customHeight').value,
+        weight: document.getElementById('customWeight').value,
+        hair_color: getFieldValue('customHair', 'customHairInput'),
+        eye_color: getFieldValue('customEyes', 'customEyesInput'),
+        profession: getFieldValue('customProfession', 'customProfessionInput'),
+        personality: getFieldValue('customPersonality', 'customPersonalityInput'),
+        nationality: getFieldValue('customNationality', 'customNationalityInput'),
+        fantasy_race: getFieldValue('customRace', 'customRaceInput'),
+        language: currentLanguage
+    };
+    
+    // 创建详细的提示文本，包含所有参数
+    const promptText = currentLanguage === 'zh' ? 
+        `生成一个${request.nationality}的${request.profession}角色：
+        - 性别：${request.gender}
+        - 年龄：${request.age}
+        - 身高：${request.height}，体重：${request.weight}
+        - 发色：${request.hair_color}，瞳色：${request.eye_color}
+        - 性格：${request.personality}
+        - 种族：${request.fantasy_race}` :
+        `Создать персонажа ${request.nationality} ${request.profession}：
+        - Пол: ${request.gender}
+        - Возраст: ${request.age}
+        - Рост: ${request.height}, Вес: ${request.weight}
+        - Цвет волос: ${request.hair_color}, Цвет глаз: ${request.eye_color}
+        - Характер: ${request.personality}
+        - Раса: ${request.fantasy_race}`;
+    
+    // 添加用户消息
+    addMessage(promptText, true);
+    
+    // 显示停止 кнопку,隐藏发送 кнопку
+    toggleButtons(true);
+    
+    // 显示输入指示器
+    showTypingIndicator();
+    
+    try {
+        const response = await callApi('generate/character', 'POST', request);
+        
+        if (response.error) {
+            addMessage(`❌ ${currentLanguage === 'zh' ? '生成角色时出错：' : 'Ошибка при создании персонажа：'} ${response.error}`);
+        } else {
+            const character = response.character;
+            
+            // 检查character对象是否存在
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? '角色生成失败：返回数据格式错误' : 'Ошибка создания персонажа：неверный формат данных'}`);
+                return;
+            }
+            
+            let resultText = currentLanguage === 'zh' ?
+                `🎨 <strong>角色生成成功！</strong><br>
+                 👤 <strong>姓名：</strong>${character.name || '未知'}<br>
+                 📝 <strong>描述：</strong>${character.description || '无描述'}<br>` :
+                `🎨 <strong>Персонаж создан успешно！</strong><br>
+                 👤 <strong>Имя：</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание：</strong>${character.description || 'Без описания'}<br>`;
+            
+            // 添加PDF下载链接
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF-архив</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">(PDF не создан)</span>` :
+                    `<span style="color: #666;">(PDF не создан)</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // Добавляем изображение
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>` :
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>`);
+                }, 100);
+            }
+        }
+    } catch (error) {
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос завершился с ошибкой:' : 'Запрос не удался:'} ${error.message}`);
+    } finally {
+        // Скрываем кнопку остановки, показываем кнопку отправки
+        toggleButtons(false);
+        hideTypingIndicator();
+    }
+}
+
+// 生成真正随机的角色
+async function generateRandomCharacter() {
+    const t = translations[currentLanguage];
+    
+    // Случайным образом генерируем различные атрибуты персонажа - 根据语言切换
+    const genders = currentLanguage === 'zh' ? ['男', '女'] : ['мужчина', 'женщина'];
+    const ages = currentLanguage === 'zh' ? 
+        ['18岁', '22岁', '28岁', '35岁', '45岁', '60岁', '150岁', '300岁'] : 
+        ['18 лет', '22 лет', '28 лет', '35 лет', '45 лет', '60 лет', '150 лет', '300 лет'];
+    const heights = currentLanguage === 'zh' ? 
+        ['160cm', '170cm', '175cm', '180cm', '185cm', '190cm', '200cm', '140cm'] : 
+        ['160см', '170см', '175см', '180см', '185см', '190см', '200см', '140см'];
+    const weights = currentLanguage === 'zh' ? 
+        ['50kg', '60kg', '65kg', '70kg', '75kg', '80kg', '85kg', '90kg'] : 
+        ['50кг', '60кг', '65кг', '70кг', '75кг', '80кг', '85кг', '90кг'];
+    const hairColors = currentLanguage === 'zh' ? 
+        ['黑色', '棕色', '金色', '红色', '白色', '银色', '蓝色', '紫色', '绿色'] : 
+        ['черный', 'коричневый', 'золотой', 'красный', 'белый', 'серебряный', 'синий', 'фиолетовый', 'зеленый'];
+    const eyeColors = currentLanguage === 'zh' ? 
+        ['黑色', '棕色', '蓝色', '绿色', '灰色', '琥珀色', '紫色', '红色', '金色'] : 
+        ['черный', 'коричневый', 'синий', 'зеленый', 'серый', 'янтарный', 'фиолетовый', 'красный', 'золотой'];
+    const professions = currentLanguage === 'zh' ? 
+        ['骑士', '巫师', '弓箭手', '战士', '法师', '盗贼', '牧师', '商人', '农民', '学者', '艺术家', '医生'] : 
+        ['рыцарь', 'волшебник', 'лучник', 'воин', 'маг', 'вор', 'священник', 'торговец', 'фермер', 'ученый', 'художник', 'врач'];
+    const personalities = currentLanguage === 'zh' ? 
+        ['勇敢', '智慧', '神秘', '温和', '优雅', '敏捷', '坚韧', '诚实', '幽默', '严肃', '热情', '冷静'] : 
+        ['храбрый', 'умный', 'таинственный', 'мягкий', 'элегантный', 'проворный', 'стойкий', 'честный', 'юмористический', 'серьезный', 'страстный', 'спокойный'];
+    const nationalities = currentLanguage === 'zh' ? 
+        ['中国', '俄罗斯', '英国', '日本', '法国', '德国', '意大利', '西班牙', '美国', '印度', '埃及', '希腊'] : 
+        ['Китай', 'Россия', 'Великобритания', 'Япония', 'Франция', 'Германия', 'Италия', 'Испания', 'США', 'Индия', 'Египет', 'Греция'];
+    const fantasyRaces = currentLanguage === 'zh' ? 
+        ['人类', '精灵', '矮人', '兽人', '龙族', '天使', '恶魔', '吸血鬼', '狼人', '妖精', '元素生物', '机械生命'] : 
+        ['человек', 'эльф', 'гном', 'орк', 'дракон', 'ангел', 'демон', 'вампир', 'оборотень', 'фея', 'элементаль', 'механическое существо'];
+    
+    // Случайным образом выбираем атрибуты (значения на китайском)
+    const rawRequest = {
+        gender: genders[Math.floor(Math.random() * genders.length)],
+        age: ages[Math.floor(Math.random() * ages.length)],
+        height: heights[Math.floor(Math.random() * heights.length)],
+        weight: weights[Math.floor(Math.random() * weights.length)],
+        hair_color: hairColors[Math.floor(Math.random() * hairColors.length)],
+        eye_color: eyeColors[Math.floor(Math.random() * eyeColors.length)],
+        profession: professions[Math.floor(Math.random() * professions.length)],
+        personality: Array.from({length: 3}, () => personalities[Math.floor(Math.random() * personalities.length)]).join('，'),
+        nationality: nationalities[Math.floor(Math.random() * nationalities.length)],
+        fantasy_race: Math.random() > 0.3 ? fantasyRaces[Math.floor(Math.random() * fantasyRaces.length)] : '',
+        language: currentLanguage
+    };
+    
+    // Получаем локализованные значения в зависимости от текущего языка
+    const localizedRequest = {
+        gender: currentLanguage === 'zh' ? rawRequest.gender : (rawRequest.gender === '男' ? 'мужчина' : 'женщина'),
+        age: currentLanguage === 'zh' ? rawRequest.age : rawRequest.age.replace('岁', ' лет').replace('cm', 'см').replace('kg', 'кг'),
+        height: currentLanguage === 'zh' ? rawRequest.height : rawRequest.height.replace('cm', 'см'),
+        weight: currentLanguage === 'zh' ? rawRequest.weight : rawRequest.weight.replace('kg', 'кг'),
+        hair_color: currentLanguage === 'zh' ? rawRequest.hair_color : getRussianTranslation(rawRequest.hair_color),
+        eye_color: currentLanguage === 'zh' ? rawRequest.eye_color : getRussianTranslation(rawRequest.eye_color),
+        profession: currentLanguage === 'zh' ? rawRequest.profession : getRussianTranslation(rawRequest.profession),
+        personality: currentLanguage === 'zh' ? rawRequest.personality : getRussianTranslation(rawRequest.personality),
+        nationality: currentLanguage === 'zh' ? rawRequest.nationality : getRussianTranslation(rawRequest.nationality),
+        fantasy_race: currentLanguage === 'zh' ? rawRequest.fantasy_race : getRussianTranslation(rawRequest.fantasy_race),
+        language: currentLanguage
+    };
+    
+    // Создаем текст запроса
+    const promptText = currentLanguage === 'zh' ? 
+        `生成一个${localizedRequest.nationality}的${localizedRequest.fantasy_race ? localizedRequest.fantasy_race + '' : ''}${localizedRequest.profession}角色：
+        - 性别：${localizedRequest.gender}
+        - 年龄：${localizedRequest.age}
+        - Рост：${localizedRequest.height}，Вес：${localizedRequest.weight}
+        - Цвет волос：${localizedRequest.hair_color}，Цвет глаз：${localizedRequest.eye_color}
+        - Характер：${localizedRequest.personality}
+        ${localizedRequest.fantasy_race ? '- Раса：' + localizedRequest.fantasy_race : ''}` :
+        `Создать персонажа ${localizedRequest.nationality} ${localizedRequest.fantasy_race ? localizedRequest.fantasy_race + ' ' : ''}${localizedRequest.profession}：
+        - Пол: ${localizedRequest.gender}
+        - Возраст: ${localizedRequest.age}
+        - Рост: ${localizedRequest.height}, Вес: ${localizedRequest.weight}
+        - Цвет волос: ${localizedRequest.hair_color}, Цвет глаз: ${localizedRequest.eye_color}
+        - Характер: ${localizedRequest.personality}
+        ${localizedRequest.fantasy_race ? '- Раса: ' + localizedRequest.fantasy_race : ''}`;
+    
+    // Добавляем сообщение пользователя
+    addMessage(promptText, true);
+    
+    // Показываем кнопку остановки, скрываем кнопку отправки
+    toggleButtons(true);
+    
+    // Показываем индикатор ввода
+    showTypingIndicator();
+    
+    // Отправляем запрос на сервер с использованием исходных китайских значений
+    try {
+        const response = await callApi('generate/character', 'POST', rawRequest);
+        
+        if (response.error) {
+            addMessage(`❌ ${currentLanguage === 'zh' ? 'Генерация персонажа завершилась с ошибкой:' : 'Ошибка при создании персонажа:'} ${response.error}`);
+        } else {
+            const character = response.character;
+            
+            // Проверяем, существует ли объект character
+            if (!character) {
+                addMessage(`❌ ${currentLanguage === 'zh' ? 'Генерация персонажа завершилась с ошибкой: неверный формат данных' : 'Ошибка создания персонажа: неверный формат данных'}`);
+                return;
+            }
+            
+            let resultText = currentLanguage === 'zh' ?
+                `🎨 <strong>Случайный персонаж успешно создан!</strong><br>
+                 👤 <strong>Имя:</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание:</strong>${character.description || 'Без описания'}<br>` :
+                `🎨 <strong>Случайный персонаж успешно создан!</strong><br>
+                 👤 <strong>Имя:</strong>${character.name || 'Неизвестно'}<br>
+                 📝 <strong>Описание:</strong>${character.description || 'Без описания'}<br>`;
+            
+            // Добавляем ссылку для скачивания PDF
+            if (response.pdf_url) {
+                resultText += currentLanguage === 'zh' ?
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF-архив</a>` :
+                    `<a href="${API_BASE}${response.pdf_url}" class="download-link">📥 Скачать PDF</a>`;
+            } else {
+                resultText += currentLanguage === 'zh' ?
+                    `<span style="color: #666;">(PDF не создан)</span>` :
+                    `<span style="color: #666;">(PDF не создан)</span>`;
+            }
+            
+            addMessage(resultText);
+            
+            // Добавляем изображение
+            if (response.image_url) {
+                setTimeout(() => {
+                    addMessage(`<img src="${API_BASE}${response.image_url}" class="character-image" alt="Сгенерированное изображение персонажа">`);
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    addMessage(currentLanguage === 'zh' ? 
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>` :
+                        `🖼️ <span style="color: #666;">(Изображение не создано)</span>`);
+                }, 100);
+            }
+        }
+    } catch (error) {
+        addMessage(`❌ ${currentLanguage === 'zh' ? 'Запрос завершился с ошибкой:' : 'Запрос не удался:'} ${error.message}`);
+    } finally {
+        // Скрываем кнопку остановки, показываем кнопку отправки
+        toggleButtons(false);
+        hideTypingIndicator();
+    }
+}
+
+// Инициализация после загрузки страницы
+window.onload = init;
