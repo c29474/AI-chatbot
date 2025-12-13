@@ -1,5 +1,5 @@
-const API_BASE = 'http://localhost:8002/api';
-const FILE_BASE = 'http://localhost:8002';
+const API_BASE = 'http://localhost:8004/api';
+const FILE_BASE = 'http://localhost:8004';
 let currentLanguage = 'ru';
 let messageHistory = [];
 let currentRequestController = null; // 用于中止当前请求
@@ -871,133 +871,6 @@ function setupCustomInputHandlers() {
 }
 
 // 生成自定义角色
-// 辅助函数：获取中文到俄文的翻译
-function getRussianTranslation(chineseText) {
-    // 发色翻译
-    const hairColorTranslations = {
-        '黑色': 'черные',
-        '棕色': 'коричневые',
-        '金色': 'золотые',
-        '红色': 'рыжие',
-        '白色': 'белые',
-        '银色': 'серебристые',
-        '蓝色': 'синие',
-        '紫色': 'фиолетовые',
-        '绿色': 'зеленые',
-        '粉色': 'розовые'
-    };
-    
-    // 瞳色翻译
-    const eyeColorTranslations = {
-        '黑色': 'черные',
-        '棕色': 'коричневые',
-        '蓝色': 'голубые',
-        'зеленые': 'зеленые',
-        'серые': 'серые',
-        'янтарные': 'янтарные',
-        'фиолетовые': 'фиолетовые',
-        'красные': 'красные',
-        'золотые': 'золотые',
-        'серебристые': 'серебристые'
-    };
-    
-    // 性格翻译
-    const personalityTranslations = {
-        '勇敢': 'храбрый',
-        'мудрый': 'мудрый',
-        'загадочный': 'загадочный',
-        'мягкий': 'мягкий',
-        'элегантный': 'элегантный',
-        'проворный': 'проворный',
-        'стойкий': 'стойкий',
-        'честный': 'честный',
-        'веселый': 'веселый',
-        'серьезный': 'серьезный',
-        'страстный': 'страстный',
-        'спокойный': 'спокойный',
-        'решительный': 'решительный',
-        'осторожный': 'осторожный',
-        'оптимистичный': 'оптимистичный',
-        'открытый': 'открытый'
-    };
-    
-    // страна
-    const nationalityTranslations = {
-        'Китай': 'Китай',
-        'Россия': 'Россия',
-        'Англия': 'Англия',
-        'Япония': 'Япония',
-        'Франция': 'Франция',
-        'Германия': 'Германия',
-        'Италия': 'Италия',
-        'Испания': 'Испания',
-        'США': 'США',
-        'Индия': 'Индия',
-        'Египет': 'Египет',
-        'Греция': 'Греция',
-        'Бразилия': 'Бразилия',
-        'Мексика': 'Мексика',
-        'Корея': 'Корея',
-        'Таиланд': 'Таиланд',
-        'Австралия': 'Австралия',
-        'Канада': 'Канада'
-    };
-    
-    // профессия
-    const professionTranslations = {
-        'рыцарь': 'рыцарь',
-        'волшебник': 'волшебник',
-        'лучник': 'лучник',
-        'воин': 'воин',
-        'маг': 'маг',
-        'вор': 'вор',
-        'священник': 'священник',
-        'торговец': 'торговец',
-        'фермер': 'фермер',
-        'ученый': 'ученый',
-        'художник': 'художник',
-        'доктор': 'доктор',
-        'инженер': 'инженер',
-        'учитель': 'учитель',
-        'повар': 'повар',
-        'моряк': 'моряк',
-        'охотник': 'охотник',
-        'кузнец': 'кузнец',
-        'алхимик': 'алхимик',
-        'бард': 'бард'
-    };
-    
-    // раса
-    const raceTranslations = {
-        'человек': 'человек',
-        'эльф': 'эльф',
-        'гном': 'гном',
-        'орк': 'орк',
-        'дракон': 'дракон',
-        'ангел': 'ангел',
-        'демон': 'демон',
-        'вампир': 'вампир',
-        'оборотень': 'оборотень',
-        'фея': 'фея',
-        'элементаль': 'элементаль',
-        'механическое существо': 'механическое существо',
-        'нежить': 'нежить',
-        'кентавр': 'кентавр',
-        'троль': 'троль',
-        'гоблин': 'гоблин',
-        'нага': 'нага',
-        'друид': 'друид'
-    };
-    
-    // попытка найти перевод
-    return hairColorTranslations[chineseText] || 
-           eyeColorTranslations[chineseText] || 
-           personalityTranslations[chineseText] || 
-           nationalityTranslations[chineseText] || 
-           professionTranslations[chineseText] || 
-           raceTranslations[chineseText] || 
-           chineseText; // если перевод не найден, вернуть исходный текст
-}
 
 // 扩展翻译映射表，添加更多中文词汇的俄语翻译
 function getExtendedRussianTranslation(chineseText) {
@@ -1198,159 +1071,34 @@ async function generateCustomCharacter() {
         language: currentLanguage
     };
     
-    // Создание подробного текста запроса, содержащего все параметры
-    // Для русскоязычной среды подготовка переведенных значений
+    // 使用统一的扩展翻译函数处理俄语请求
     const localizedRequest = {...request};
     
     if (currentLanguage === 'ru') {
-        // перевод пола
-        const genderTranslations = {
-            '男': 'мужчина',
-            '女': 'женщина'
-        };
+        // 使用getExtendedRussianTranslation函数进行翻译
+        localizedRequest.gender = getExtendedRussianTranslation(request.gender);
+        localizedRequest.hair_color = getExtendedRussianTranslation(request.hair_color);
+        localizedRequest.eye_color = getExtendedRussianTranslation(request.eye_color);
+        localizedRequest.nationality = getExtendedRussianTranslation(request.nationality);
+        localizedRequest.profession = getExtendedRussianTranslation(request.profession);
+        localizedRequest.fantasy_race = getExtendedRussianTranslation(request.fantasy_race);
         
-        // перевод цвета волос
-        const hairColorTranslations = {
-            'черные': 'черные',
-            'коричневые': 'коричневые',
-            'золотые': 'золотые',
-            'рыжие': 'рыжие',
-            'белые': 'белые',
-            'серебристые': 'серебристые',
-            'синие': 'синие',
-            'фиолетовые': 'фиолетовые',
-            'зеленые': 'зеленые',
-            'розовые': 'розовые'
-        };
-        
-        // перевод цвета глаз
-        const eyeColorTranslations = {
-            'черные': 'черные',
-            'коричневые': 'коричневые',
-            'голубые': 'голубые',
-            'зеленые': 'зеленые',
-            'серые': 'серые',
-            'янтарные': 'янтарные',
-            'фиолетовые': 'фиолетовые',
-            'красные': 'красные',
-            'золотые': 'золотые',
-            'серебристые': 'серебристые'
-        };
-        
-        // перевод характера
-        const personalityTranslations = {
-            'храбрый': 'храбрый',
-            'мудрый': 'мудрый',
-            'загадочный': 'загадочный',
-            'мягкий': 'мягкий',
-            'элегантный': 'элегантный',
-            'проворный': 'проворный',
-            'стойкий': 'стойкий',
-            'честный': 'честный',
-            'веселый': 'веселый',
-            'серьезный': 'серьезный',
-            'страстный': 'страстный',
-            'спокойный': 'спокойный',
-            'решительный': 'решительный',
-            'осторожный': 'осторожный',
-            'оптимистичный': 'оптимистичный',
-            'открытый': 'открытый',
-            '，': ', ',
-            ',': ', '
-        };
-        
-        // страна
-        const nationalityTranslations = {
-            'Китай': 'Китай',
-            'Россия': 'Россия',
-            'Англия': 'Англия',
-            'Япония': 'Япония',
-            'Франция': 'Франция',
-            'Германия': 'Германия',
-            'Италия': 'Италия',
-            'Испания': 'Испания',
-            'США': 'Америка',
-            'Индия': 'Индия',
-            'Египет': 'Египет',
-            'Греция': 'Греция',
-            'Бразилия': 'Бразилия',
-            'Мексика': 'Мексика',
-            'Корея': 'Корея',
-            'Таиланд': 'Таиланд',
-            'Австралия': 'Австралия',
-            'Канада': 'Канада'
-        };
-        
-        // профессия
-        const professionTranslations = {
-            'рыцарь': 'рыцарь',
-            'волшебник': 'волшебник',
-            'лучник': 'лучник',
-            'воин': 'воин',
-            'маг': 'маг',
-            'вор': 'вор',
-            'священник': 'священник',
-            'торговец': 'торговец',
-            'фермер': 'фермер',
-            'ученый': 'ученый',
-            'художник': 'художник',
-            'доктор': 'доктор',
-            'инженер': 'инженер',
-            'учитель': 'учитель',
-            'повар': 'повар',
-            'моряк': 'моряк',
-            'охотник': 'охотник',
-            'кузнец': 'кузнец',
-            'алхимик': 'алхимик',
-            'бард': 'бард'
-        };
-        
-        // раса
-        const raceTranslations = {
-            'человек': 'человек',
-            'эльф': 'эльф',
-            'гном': 'гном',
-            'орк': 'орк',
-            'дракон': 'дракон',
-            'ангел': 'ангел',
-            'демон': 'демон',
-            'вампир': 'вампир',
-            'оборотень': 'оборотень',
-            'фея': 'фея',
-            'элементаль': 'элементаль',
-            'механическое существо': 'механическое существо',
-            'нежить': 'нежить',
-            'кентавр': 'кентавр',
-            'троль': 'троль',
-            'гоблин': 'гоблин',
-            'нага': 'нага',
-            'друид': 'друид'
-        };
-        
-        // перевод пола
-        localizedRequest.gender = genderTranslations[request.gender] || request.gender;
-        localizedRequest.hair_color = hairColorTranslations[request.hair_color] || request.hair_color;
-        localizedRequest.eye_color = eyeColorTranslations[request.eye_color] || request.eye_color;
-        localizedRequest.nationality = nationalityTranslations[request.nationality] || request.nationality;
-        localizedRequest.profession = professionTranslations[request.profession] || request.profession;
-        localizedRequest.fantasy_race = raceTranslations[request.fantasy_race] || request.fantasy_race;
-        
-        // перевод характера (может быть несколько характеристик)
+        // 翻译性格（可能包含多个特征）
         if (request.personality.includes('，') || request.personality.includes(',')) {
             const personalities = request.personality.replace(/，/g, ',').split(',');
             const translatedPersonalities = personalities.map(p => {
                 const trimmed = p.trim();
-                return personalityTranslations[trimmed] || trimmed;
+                return getExtendedRussianTranslation(trimmed);
             });
             localizedRequest.personality = translatedPersonalities.join(', ');
         } else {
-            localizedRequest.personality = personalityTranslations[request.personality] || request.personality;
+            localizedRequest.personality = getExtendedRussianTranslation(request.personality);
         }
         
-        // перевод единиц измерения возраста, роста и веса
-        localizedRequest.age = request.age.replace('лет', ' лет');
-        localizedRequest.height = request.height.replace('см', 'см');
-        localizedRequest.weight = request.weight.replace('кг', 'кг');
+        // 翻译单位
+        localizedRequest.age = request.age.replace('岁', ' лет').replace('cm', ' см').replace('kg', ' кг');
+        localizedRequest.height = request.height.replace('cm', ' см');
+        localizedRequest.weight = request.weight.replace('kg', ' кг');
     }
     
     const promptText = currentLanguage === 'zh' ? 
@@ -2073,8 +1821,8 @@ async function callApi(endpoint, method = 'GET', data = null) {
             }
             
             const errorMsg = currentLanguage === 'zh' 
-                ? '网络连接失败，请检查：\n1. 后端服务是否运行在 http://localhost:8002\n2. 网络连接是否正常\n3. 请求可能超时（生成图片和PDF需要较长时间）\n\n提示：查看后端控制台日志了解处理进度'
-                : 'Ошибка сети, проверьте:\n1. Запущен ли сервер на http://localhost:8002\n2. Нормальное ли соединение\n3. Возможно истекло время ожидания (генерация изображений и PDF занимает много времени)\n\nПодсказка: проверьте логи сервера для понимания прогресса';
+                ? '网络连接失败，请检查：\n1. 后端服务是否运行在 http://localhost:8004\n2. 网络连接是否正常\n3. 请求可能超时（生成图片和PDF需要较长时间）\n\n提示：查看后端控制台日志了解处理进度'
+                : 'Ошибка сети, проверьте:\n1. Запущен ли сервер на http://localhost:8004\n2. Нормальное ли соединение\n3. Возможно истекло время ожидания (генерация изображений и PDF занимает много времени)\n\nПодсказка: проверьте логи сервера для понимания прогресса';
             return { error: errorMsg };
         }
         

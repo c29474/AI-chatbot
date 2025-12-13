@@ -1450,4 +1450,4 @@ if __name__ == "__main__":
     print(f"临时文件目录: {TEMP_FILE_DIR}")
     print("=" * 50)
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8004)
