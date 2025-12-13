@@ -1,63 +1,100 @@
-# main.py - 后端核心服务 (完整修正版)
-import os
-import uuid
-import json 
-import requests
-import hashlib
-import hmac
-import base64
-from datetime import datetime
-from time import mktime
-from wsgiref.handlers import format_date_time
-from urllib.parse import urlparse, urlencode
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from typing import Optional, Union
-import websocket
-import threading
-import asyncio
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Image
-from reportlab.lib.units import inch
+"""
+创意写作助手 - 后端核心服务
+
+功能说明：
+1. 提供AI角色生成服务，支持多语言（中文、俄语）
+2. 集成星火大模型API进行文本生成和图像生成
+3. 生成角色描述、角色图片和PDF文档
+4. 支持WebSocket实时聊天和HTTP API调用
+5. 自动打开浏览器功能，提升用户体验
+
+主要模块：
+- 文本生成：通过WebSocket连接星火文本API
+- 图像生成：通过HTTP调用星火图像API  
+- PDF生成：使用reportlab库生成角色文档
+- 文件服务：管理临时文件和静态资源
+- 多语言支持：检测和翻译混合语言内容
+
+作者：AI助手
+版本：1.0
+"""
+
+# ==================== 导入依赖模块 ====================
+# 标准库模块
+import os                    # 操作系统接口，文件路径操作
+import uuid                  # 生成唯一标识符
+import json                  # JSON数据处理
+import requests              # HTTP请求库
+import hashlib               # 哈希算法库
+import hmac                  # HMAC签名算法
+import base64                # Base64编码解码
+from datetime import datetime  # 日期时间处理
+from time import mktime      # 时间转换
+from wsgiref.handlers import format_date_time  # HTTP日期格式化
+from urllib.parse import urlparse, urlencode  # URL解析和编码
+
+# FastAPI框架相关
+from fastapi import FastAPI, HTTPException, Request  # FastAPI核心组件
+from fastapi.middleware.cors import CORSMiddleware   # 跨域中间件
+from fastapi.responses import FileResponse           # 文件响应
+from fastapi.staticfiles import StaticFiles          # 静态文件服务
+
+# 数据模型和类型提示
+from pydantic import BaseModel                       # 数据验证模型
+from typing import Optional, Union                   # 类型提示
+
+# 第三方库
+import websocket              # WebSocket客户端
+import threading              # 多线程支持
+import asyncio                # 异步编程
+
+# PDF生成相关
+from reportlab.lib.pagesizes import A4               # PDF页面尺寸
+from reportlab.pdfgen import canvas                  # PDF画布
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle  # 样式管理
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Image  # PDF元素
+from reportlab.lib.units import inch                 # 单位转换
 
 # ==================== 配置区域 ====================
-# 1. 星火文本API配置 (WebSocket) - 根据用户提供的背单词服务配置
-SPARK_TEXT_APP_ID = "40061a4f"
-SPARK_TEXT_API_SECRET = "NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk"
-SPARK_TEXT_API_KEY = "21aca9874cfd4465704c1a1498e2f931"
-SPARK_TEXT_WS_URL = "wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat"
-# 文本服务的modelId - 根据用户提供的背单词服务配置
-TEXT_MODEL_ID = "xop3qwen1b7"
+# 注意：以下配置信息需要根据实际API服务进行修改
 
-# 2. 星火图像生成API配置 (HTTP) - 根据用户提供的实际配置
-TTI_API_URL = "https://maas-api.cn-huabei-1.xf-yun.com/v2.1/tti"
-TTI_APP_ID = "40061a4f"
-TTI_API_SECRET = "NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk"
-TTI_API_KEY = "21aca9874cfd4465704c1a1498e2f931"
-# 图像服务的modelId - 根据用户提供的配置
-IMAGE_MODEL_ID = "xopzimageturbo"
+# 1. 星火文本API配置 (WebSocket连接)
+# 用于角色描述文本的AI生成，通过WebSocket协议进行实时通信
+SPARK_TEXT_APP_ID = "40061a4f"                    # 应用ID，标识调用者身份
+SPARK_TEXT_API_SECRET = "NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk"  # API密钥，用于签名认证
+SPARK_TEXT_API_KEY = "21aca9874cfd4465704c1a1498e2f931"     # API密钥，用于身份验证
+SPARK_TEXT_WS_URL = "wss://maas-api.cn-huabei-1.xf-yun.com/v1.1/chat"  # WebSocket服务地址
+TEXT_MODEL_ID = "xop3qwen1b7"                     # 文本生成模型ID，指定使用的AI模型
 
-# 3. 其他
-TEMP_FILE_DIR = "./temp_files"
-os.makedirs(TEMP_FILE_DIR, exist_ok=True)
+# 2. 星火图像生成API配置 (HTTP请求)
+# 用于根据角色描述生成对应的角色图片
+TTI_API_URL = "https://maas-api.cn-huabei-1.xf-yun.com/v2.1/tti"  # 图像生成API地址
+TTI_APP_ID = "40061a4f"                           # 应用ID，与文本API相同
+TTI_API_SECRET = "NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk"  # API密钥，用于签名认证
+TTI_API_KEY = "21aca9874cfd4465704c1a1498e2f931"     # API密钥，用于身份验证
+IMAGE_MODEL_ID = "xopzimageturbo"                 # 图像生成模型ID，指定使用的AI模型
+
+# 3. 文件存储配置
+TEMP_FILE_DIR = "./temp_files"                    # 临时文件存储目录
+os.makedirs(TEMP_FILE_DIR, exist_ok=True)         # 确保临时目录存在，不存在则创建
 # ==================== 配置结束 ====================
 
+# ==================== FastAPI应用初始化 ====================
+# 创建FastAPI应用实例，设置应用标题
 app = FastAPI(title="创意写作助手API")
+
+# 添加CORS中间件，解决跨域问题
+# 允许所有来源的请求，方便前端开发和测试
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],           # 允许所有来源的跨域请求
+    allow_credentials=True,        # 允许携带认证信息
+    allow_methods=["*"],           # 允许所有HTTP方法
+    allow_headers=["*"],           # 允许所有HTTP头
 )
 
-# Serve static files (but not for API routes)
-# We need to serve individual static files since we're not mounting the whole directory
+# 注意：这里不直接挂载静态文件目录，而是通过自定义路由提供文件服务
+# 这样可以更好地控制文件访问权限和路径映射
 @app.get("/script.js", response_class=FileResponse)
 async def get_script():
     return "script.js"
@@ -1449,5 +1486,24 @@ if __name__ == "__main__":
     print(f"图像API-ModelID: {IMAGE_MODEL_ID}")
     print(f"临时文件目录: {TEMP_FILE_DIR}")
     print("=" * 50)
+    
+    # 导入必要的模块
     import uvicorn
+    import webbrowser
+    import threading
+    import time
+    
+    def open_browser():
+        """在服务器启动后自动打开浏览器"""
+        time.sleep(2)  # 等待服务器启动
+        url = "http://localhost:8004/"
+        print(f"正在打开浏览器: {url}")
+        webbrowser.open(url)
+    
+    # 创建并启动浏览器打开线程
+    browser_thread = threading.Thread(target=open_browser)
+    browser_thread.daemon = True
+    browser_thread.start()
+    
+    # 启动服务器
     uvicorn.run(app, host="0.0.0.0", port=8004)

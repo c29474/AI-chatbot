@@ -1,62 +1,131 @@
+<!--
+创意写作助手 - 前端HTML界面
+
+功能说明：
+1. 提供多语言聊天界面，支持中文和俄语
+2. 集成角色生成表单和快速操作按钮
+3. 实现响应式布局，适配不同屏幕尺寸
+4. 提供聊天历史管理和文件下载功能
+
+主要组件：
+- 聊天头部：标题、语言切换、控制按钮
+- 聊天区域：消息显示、输入框、快速操作
+- 侧边栏：角色生成表单、自定义设置
+- 响应式设计：移动端和桌面端适配
+
+作者：AI助手
+版本：1.0
+-->
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <!-- 基础元数据 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- 内容安全策略：限制资源加载来源，增强安全性 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:8004; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' http://localhost:8004 data:; frame-src 'self' http://localhost:8004;">
+    
+    <!-- 引用策略：控制HTTP Referer头的发送 -->
     <meta name="referrer" content="no-referrer-when-downgrade">
+    
+    <!-- 页面标题，通过JavaScript动态更新 -->
     <title id="pageTitle">创意写作助手 - AI聊天机器人</title>
+    
+    <!-- 样式表链接 -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- 主聊天容器 -->
     <div class="chat-container">
+        
+        <!-- 聊天头部区域 -->
         <div class="chat-header">
+            
+            <!-- 聊天控制按钮组 -->
             <div class="chat-controls">
+                <!-- 新建对话按钮：清空当前聊天记录，开始新对话 -->
                 <button class="chat-control-btn" onclick="newConversation()" id="newChatBtn"></button>
+                
+                <!-- 清空对话按钮：清除所有消息，但保留界面状态 -->
                 <button class="chat-control-btn" onclick="clearConversation()" id="clearChatBtn"></button>
+                
+                <!-- 保存聊天记录按钮：将当前对话保存为文件 -->
                 <button class="chat-control-btn save-chat-btn" onclick="saveChatHistory()" id="saveChatBtn"></button>
             </div>
+            
+            <!-- 应用标题和描述 -->
             <h1 id="title"></h1>
             <p id="subtitle"></p>
+            
+            <!-- 语言切换下拉菜单 -->
             <div class="language-switch">
                 <select id="lang" onchange="switchLanguage()">
                     <option value="zh">中文</option>
                     <option value="ru">Русский</option>
                 </select>
             </div>
+            
+            <!-- 侧边栏切换按钮 -->
             <div class="sidebar-toggle">
                 <button class="chat-control-btn" onclick="toggleSidebar()" id="sidebarToggleBtn"></button>
             </div>
         </div>
         
+        <!-- 主内容区域容器 -->
         <div class="main-container">
+            
+            <!-- 聊天区域 -->
             <div class="chat-area">
+                
+                <!-- 快速操作按钮区域：常用功能快捷入口 -->
                 <div class="quick-actions" id="quickActions">
                 </div>
                 
+                <!-- 预设角色按钮区域：快速生成常见角色类型 -->
                 <div class="preset-buttons" id="presetButtons">
                 </div>
                 
+                <!-- 聊天消息显示区域 -->
                 <div class="chat-messages" id="chatMessages">
+                    <!-- 欢迎消息容器 -->
                     <div class="message bot">
                         <div class="message-content" id="welcomeContent">
                         </div>
                     </div>
                 </div>
                 
+                <!-- 聊天输入区域 -->
                 <div class="chat-input">
+                    <!-- 消息输入框 -->
                     <input type="text" id="messageInput" placeholder="" onkeypress="handleKeyPress(event)">
+                    
+                    <!-- 发送消息按钮 -->
                     <button onclick="sendMessage()" id="sendBtn"></button>
+                    
+                    <!-- 停止生成按钮：中止正在进行的AI生成过程 -->
                     <button onclick="stopGeneration()" id="stopBtn" class="stop-btn"></button>
                 </div>
             </div>
             
+            <!-- 侧边栏：角色生成表单区域 -->
             <div class="sidebar" id="sidebar">
+                <!-- 角色生成表单容器 -->
                 <div class="character-form" id="characterForm">
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- JavaScript脚本引入 -->
+    <!-- 注意：script.js包含所有前端交互逻辑，包括：
+         - 界面初始化
+         - 聊天功能
+         - 角色生成
+         - 多语言支持
+         - 文件处理
+    -->
     <script src="script.js"></script>
 </body>
 </html>

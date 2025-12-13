@@ -1,53 +1,131 @@
-const API_BASE = 'http://localhost:8004/api';
-const FILE_BASE = 'http://localhost:8004';
-let currentLanguage = 'ru';
-let messageHistory = [];
-let currentRequestController = null; // 用于中止当前请求
-let isGenerating = false; // 标记是否正在生成
+/**
+ * 创意写作助手 - 前端JavaScript核心逻辑
+ * 
+ * 功能说明：
+ * 1. 提供多语言界面支持（中文、俄语）
+ * 2. 管理聊天消息历史和角色生成流程
+ * 3. 处理与后端API的通信（文本生成、图像生成、PDF生成）
+ * 4. 实现实时聊天界面和角色创建表单
+ * 5. 提供文件上传和下载功能
+ * 
+ * 主要模块：
+ * - 界面初始化：多语言文本更新、按钮状态管理
+ * - 聊天功能：消息发送、接收、历史记录管理
+ * - 角色生成：自定义角色创建、预设角色选择
+ * - 文件处理：图片显示、PDF下载、文件管理
+ * - 多语言支持：翻译函数、界面文本切换
+ * 
+ * 作者：AI助手
+ * 版本：1.0
+ */
 
-// 页面初始化
+// ==================== 全局配置和变量 ====================
+/**
+ * 后端API基础地址 - 用于所有与后端服务的通信
+ * @type {string}
+ */
+const API_BASE = 'http://localhost:8004/api';
+
+/**
+ * 文件服务基础地址 - 用于文件下载和静态资源访问
+ * @type {string}
+ */
+const FILE_BASE = 'http://localhost:8004';
+
+/**
+ * 当前界面语言 - 支持中文('zh')和俄语('ru')，默认使用俄语
+ * @type {string}
+ */
+let currentLanguage = 'ru';
+
+/**
+ * 聊天消息历史记录 - 存储所有用户和助手的对话消息
+ * @type {Array<Object>}
+ */
+let messageHistory = [];
+
+/**
+ * 当前请求控制器 - 用于中止正在进行的API请求
+ * @type {AbortController|null}
+ */
+let currentRequestController = null;
+
+/**
+ * 生成状态标记 - 防止在生成过程中发送重复请求
+ * @type {boolean}
+ */
+let isGenerating = false;
+
+/**
+ * 页面初始化函数 - 在页面加载完成后执行所有初始化操作
+ * 包括设置语言、界面更新、侧边栏状态、欢迎消息等
+ * @returns {void}
+ */
 function initializePage() {
     try {
-        // 设置语言选择器
+        // 设置语言选择器 - 根据当前语言设置下拉框选中项
         const langSelect = document.getElementById('lang');
         if (langSelect) {
             langSelect.value = currentLanguage;
         }
         
-        // 更新界面文本
+        // 强制更新所有界面文本 - 根据当前语言更新所有UI元素
         updateUI();
         
-        // 生成欢迎消息
+        // 在桌面端默认收起侧边栏 - 优化大屏幕用户体验
+        if (window.innerWidth > 768) {
+            const sidebar = document.getElementById('sidebar');
+            const mainContainer = document.querySelector('.main-container');
+            const toggleBtn = document.getElementById('sidebarToggleBtn');
+            
+            if (sidebar && mainContainer && toggleBtn) {
+                // 默认不显示侧边栏 - 提供更专注的聊天体验
+                sidebar.classList.remove('active');
+                mainContainer.classList.remove('sidebar-active');
+                
+                // 更新按钮文本 - 确保按钮文本与当前语言一致
+                const t = translations[currentLanguage];
+                toggleBtn.textContent = t.sidebarToggleBtn;
+            }
+        }
+        
+        // 生成欢迎消息 - 向用户展示应用功能和操作提示
         generateWelcomeMessage();
         
-        // 更新快速操作按钮
+        // 强制更新快速操作按钮 - 确保按钮文本与当前语言一致
         updateQuickActions();
         
-        // 更新预设角色按钮
+        // 强制更新预设角色按钮 - 更新预设角色模板的显示
         updatePresetButtons();
         
-        // 更新角色生成表单
+        // 更新角色生成表单 - 设置表单标签和占位符文本
         updateCharacterForm();
         
-        // 加载聊天历史
+        // 加载聊天历史 - 从本地存储恢复之前的对话记录
         loadChatHistory();
+        
+        console.log('[初始化] 页面初始化完成，当前语言:', currentLanguage);
     } catch (error) {
         console.error('[初始化] 错误:', error);
     }
 }
 
-// 更新界面文本
+/**
+ * 更新界面文本函数 - 根据当前语言动态更新所有UI元素的文本内容
+ * 包括页面标题、按钮文本、输入框占位符等
+ * @returns {void}
+ */
 function updateUI() {
     const t = translations[currentLanguage];
     
-    // 更新页面标题
+    // 更新页面标题 - 浏览器标签页显示的标题
     document.getElementById('pageTitle').textContent = `${t.title} - AI聊天机器人`;
     
-    // 更新主标题和副标题
+    // 更新主标题和副标题 - 应用主界面显示的标题
     document.getElementById('title').textContent = t.title;
     document.getElementById('subtitle').textContent = t.subtitle;
     
-    // 更新按钮文本
+    // 更新按钮文本 - 所有功能按钮的文本内容
     document.getElementById('newChatBtn').textContent = t.newChatBtn;
     document.getElementById('clearChatBtn').textContent = t.clearChatBtn;
     document.getElementById('saveChatBtn').textContent = t.saveChatBtn;
@@ -55,40 +133,52 @@ function updateUI() {
     document.getElementById('sendBtn').textContent = t.sendBtn;
     document.getElementById('stopBtn').textContent = currentLanguage === 'zh' ? '停止' : 'Стоп';
     
-    // 更新输入框占位符
+    // 更新输入框占位符 - 聊天输入框的提示文本
     document.getElementById('messageInput').placeholder = t.messagePlaceholder;
     
-    // 更新语言选择器选项
+    // 更新语言选择器选项 - 下拉选择框的选项文本
     const langSelect = document.getElementById('lang');
     langSelect.options[0].text = '中文';
     langSelect.options[1].text = 'Русский';
 }
 
-// 语言切换函数
+/**
+ * 语言切换函数 - 处理用户选择不同语言时的界面更新
+ * 更新所有UI文本、欢迎消息、按钮状态，并保存语言设置到本地存储
+ * @returns {void}
+ */
 function switchLanguage() {
     const langSelect = document.getElementById('lang');
     currentLanguage = langSelect.value;
     
-    // 更新界面文本
+    console.log('[语言切换] 切换到语言:', currentLanguage);
+    
+    // 强制更新所有界面文本 - 立即应用新的语言设置
     updateUI();
     
-    // 重新生成欢迎消息
+    // 重新生成欢迎消息 - 确保欢迎消息使用正确的语言
     generateWelcomeMessage();
     
-    // 重新更新快速操作按钮
+    // 强制更新快速操作按钮 - 更新快速操作区域的按钮文本
     updateQuickActions();
     
-    // 重新更新预设角色按钮
+    // 强制更新预设角色按钮 - 更新预设角色模板的显示文本
     updatePresetButtons();
     
-    // 重新更新角色生成表单
+    // 重新更新角色生成表单 - 更新表单标签和占位符文本
     updateCharacterForm();
     
-    // 保存语言设置
+    // 保存语言设置 - 将用户的语言偏好保存到本地存储
     localStorage.setItem('chatLanguage', currentLanguage);
+    
+    console.log('[语言切换] 语言切换完成');
 }
 
-// 自动保存对话历史到本地存储
+/**
+ * 自动保存对话历史到本地存储 - 将当前对话记录保存到浏览器本地存储
+ * 用于持久化保存用户对话，支持跨会话恢复
+ * @returns {void}
+ */
 function autoSaveChatHistory() {
     if (messageHistory.length > 0) {
         localStorage.setItem('chatHistory', JSON.stringify(messageHistory));
@@ -96,7 +186,11 @@ function autoSaveChatHistory() {
     }
 }
 
-// 从本地存储加载对话历史
+/**
+ * 从本地存储加载对话历史 - 从浏览器本地存储恢复之前的对话记录
+ * 支持恢复对话内容和语言设置，提供无缝的用户体验
+ * @returns {void}
+ */
 function loadChatHistory() {
     const savedHistory = localStorage.getItem('chatHistory');
     const savedLanguage = localStorage.getItem('chatLanguage');
@@ -112,7 +206,7 @@ function loadChatHistory() {
             document.getElementById('lang').value = currentLanguage;
         }
         
-        // 重新渲染消息
+        // 重新渲染消息 - 将保存的对话记录显示在聊天区域
         const messagesDiv = document.getElementById('chatMessages');
         messagesDiv.innerHTML = '';
         
@@ -128,6 +222,7 @@ function loadChatHistory() {
             messagesDiv.appendChild(messageDiv);
         });
         
+        // 滚动到最新消息 - 确保用户看到最新的对话内容
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else {
         // 如果没有历史记录，设置默认语言为俄语
@@ -141,7 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
     initializePage();
 });
 
-// 双语文本配置
+/**
+ * 双语文本配置对象 - 包含应用所有界面文本的中文和俄语翻译
+ * 支持完整的国际化，包括按钮、标签、提示信息等
+ * @type {Object}
+ */
 const translations = {
     zh: {
         title: "创意写作助手",
@@ -285,7 +384,11 @@ const translations = {
     }
 };
 
-// 预设配置 - 多语言支持
+/**
+ * 预设角色配置对象 - 包含多种预设角色的多语言属性配置
+ * 支持快速生成常见角色类型，如骑士、巫师、精灵等
+ * @type {Object}
+ */
 const presets = {
     russian_knight: {
         zh: {
@@ -419,7 +522,11 @@ const presets = {
     }
 };
 
-// 保存聊天记录
+/**
+ * 保存聊天记录函数 - 将当前对话历史导出为文本文件并下载
+ * 支持多语言提示，清理HTML标签，生成时间戳文件名
+ * @returns {void}
+ */
 function saveChatHistory() {
     const t = translations[currentLanguage];
     if (messageHistory.length === 0) {
@@ -427,12 +534,14 @@ function saveChatHistory() {
         return;
     }
     
+    // 格式化聊天内容 - 将消息历史转换为纯文本格式
     const chatContent = messageHistory.map(msg => {
         const time = msg.time;
         const sender = msg.isUser ? (currentLanguage === 'zh' ? '用户' : 'Пользователь') : (currentLanguage === 'zh' ? '助手' : 'Ассистент');
         return `[${time}] ${sender}: ${msg.content.replace(/<[^>]*>/g, '')}`;
     }).join('\n\n');
     
+    // 创建下载文件 - 使用Blob对象生成可下载的文件
     const blob = new Blob([chatContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -446,16 +555,21 @@ function saveChatHistory() {
     alert(t.chatSaved);
 }
 
-// 切换侧边栏显示/隐藏
+/**
+ * 切换侧边栏显示/隐藏函数 - 控制角色生成侧边栏的显示状态
+ * 更新按钮文本以反映当前状态，提供直观的用户反馈
+ * @returns {void}
+ */
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const mainContainer = document.querySelector('.main-container');
     const toggleBtn = document.getElementById('sidebarToggleBtn');
     
+    // 切换侧边栏显示状态 - 使用CSS类控制动画效果
     sidebar.classList.toggle('active');
     mainContainer.classList.toggle('sidebar-active');
     
-    // 更新按钮文本
+    // 更新按钮文本 - 根据侧边栏状态显示相应的文本
     const t = translations[currentLanguage];
     if (sidebar.classList.contains('active')) {
         toggleBtn.textContent = t.sidebarToggleBtnActive;
@@ -512,197 +626,107 @@ function updateCharacterForm() {
     const t = translations[currentLanguage];
     const characterFormDiv = document.getElementById('characterForm');
     
-    // 双语选项数据 - 修复：选项值也根据语言切换
-    const hairColors = currentLanguage === 'zh' ? {
-        '黑色': '黑色',
-        '棕色': '棕色',
-        '金色': '金色',
-        '红色': '红色',
-        '白色': '白色',
-        '银色': '银色',
-        '蓝色': '蓝色',
-        '紫色': '紫色',
-        '绿色': '绿色',
-        '粉色': '粉色'
-    } : {
-        'Черный': 'Черный',
-        'Коричневый': 'Коричневый',
-        'Золотой': 'Золотой',
-        'Красный': 'Красный',
-        'Белый': 'Белый',
-        'Серебряный': 'Серебряный',
-        'Синий': 'Синий',
-        'Фиолетовый': 'Фиолетовый',
-        'Зеленый': 'Зеленый',
-        'Розовый': 'Розовый'
+    // 双语选项数据 - 修复：选项值使用统一的中文键名，显示文本根据语言切换
+    const hairColors = {
+        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
+        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
+        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
+        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
+        '白色': currentLanguage === 'zh' ? '白色' : 'Белый',
+        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный',
+        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
+        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
+        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
+        '粉色': currentLanguage === 'zh' ? '粉色' : 'Розовый'
     };
     
-    const eyeColors = currentLanguage === 'zh' ? {
-        '黑色': '黑色',
-        '棕色': '棕色',
-        '蓝色': '蓝色',
-        '绿色': '绿色',
-        '灰色': '灰色',
-        '琥珀色': '琥珀色',
-        '紫色': '紫色',
-        '红色': '红色',
-        '金色': '金色',
-        '银色': '银色'
-    } : {
-        'Черный': 'Черный',
-        'Коричневый': 'Коричневый',
-        'Синий': 'Синий',
-        'Зеленый': 'Зеленый',
-        'Серый': 'Серый',
-        'Янтарный': 'Янтарный',
-        'Фиолетовый': 'Фиолетовый',
-        'Красный': 'Красный',
-        'Золотой': 'Золотой',
-        'Серебряный': 'Серебряный'
+    const eyeColors = {
+        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
+        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
+        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
+        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
+        '灰色': currentLanguage === 'zh' ? '灰色' : 'Серый',
+        '琥珀色': currentLanguage === 'zh' ? '琥珀色' : 'Янтарный',
+        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
+        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
+        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
+        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный'
     };
     
-    const personalities = currentLanguage === 'zh' ? {
-        '勇敢，忠诚': '勇敢，忠诚',
-        '智慧，神秘': '智慧，神秘',
-        '温和，优雅': '温和，优雅',
-        '敏捷，坚韧': '敏捷，坚韧',
-        '诚实，幽默': '诚实，幽默',
-        '热情，冷静': '热情，冷静',
-        '果断，谨慎': '果断，谨慎',
-        '乐观，外向': '乐观，外向'
-    } : {
-        'Храбрый, верный': 'Храбрый, верный',
-        'Мудрый, таинственный': 'Мудрый, таинственный',
-        'Мягкий, элегантный': 'Мягкий, элегантный',
-        'Проворный, стойкий': 'Проворный, стойкий',
-        'Честный, юмористичный': 'Честный, юмористичный',
-        'Страстный, спокойный': 'Страстный, спокойный',
-        'Решительный, осторожный': 'Решительный, осторожный',
-        'Оптимистичный, экстравертный': 'Оптимистичный, экстравертный'
+    const personalities = {
+        '勇敢，忠诚': currentLanguage === 'zh' ? '勇敢，忠诚' : 'Храбрый, верный',
+        '智慧，神秘': currentLanguage === 'zh' ? '智慧，神秘' : 'Мудрый, таинственный',
+        '温和，优雅': currentLanguage === 'zh' ? '温和，优雅' : 'Мягкий, элегантный',
+        '敏捷，坚韧': currentLanguage === 'zh' ? '敏捷，坚韧' : 'Проворный, стойкий',
+        '诚实，幽默': currentLanguage === 'zh' ? '诚实，幽默' : 'Честный, юмористичный',
+        '热情，冷静': currentLanguage === 'zh' ? '热情，冷静' : 'Страстный, спокойный',
+        '果断，谨慎': currentLanguage === 'zh' ? '果断，谨慎' : 'Решительный, осторожный',
+        '乐观，外向': currentLanguage === 'zh' ? '乐观，外向' : 'Оптимистичный, экстравертный'
     };
     
-    const nationalities = currentLanguage === 'zh' ? {
-        '中国': '中国',
-        '俄罗斯': '俄罗斯',
-        '英国': '英国',
-        '日本': '日本',
-        '法国': '法国',
-        '德国': '德国',
-        '意大利': '意大利',
-        '西班牙': '西班牙',
-        '美国': '美国',
-        '印度': '印度',
-        '埃及': '埃及',
-        '希腊': '希腊',
-        '巴西': '巴西',
-        '墨西哥': '墨西哥',
-        '韩国': '韩国',
-        '泰国': '泰国',
-        '澳大利亚': '澳大利亚',
-        '加拿大': '加拿大'
-    } : {
-        'Китай': 'Китай',
-        'Россия': 'Россия',
-        'Великобритания': 'Великобритания',
-        'Япония': 'Япония',
-        'Франция': 'Франция',
-        'Германия': 'Германия',
-        'Италия': 'Италия',
-        'Испания': 'Испания',
-        'США': 'США',
-        'Индия': 'Индия',
-        'Египет': 'Египет',
-        'Греция': 'Греция',
-        'Бразилия': 'Бразилия',
-        'Мексика': 'Мексика',
-        'Корея': 'Корея',
-        'Таиланд': 'Таиланд',
-        'Австралия': 'Австралия',
-        'Канада': 'Канада'
+    const nationalities = {
+        '中国': currentLanguage === 'zh' ? '中国' : 'Китай',
+        '俄罗斯': currentLanguage === 'zh' ? '俄罗斯' : 'Россия',
+        '英国': currentLanguage === 'zh' ? '英国' : 'Великобритания',
+        '日本': currentLanguage === 'zh' ? '日本' : 'Япония',
+        '法国': currentLanguage === 'zh' ? '法国' : 'Франция',
+        '德国': currentLanguage === 'zh' ? '德国' : 'Германия',
+        '意大利': currentLanguage === 'zh' ? '意大利' : 'Италия',
+        '西班牙': currentLanguage === 'zh' ? '西班牙' : 'Испания',
+        '美国': currentLanguage === 'zh' ? '美国' : 'США',
+        '印度': currentLanguage === 'zh' ? '印度' : 'Индия',
+        '埃及': currentLanguage === 'zh' ? '埃及' : 'Египет',
+        '希腊': currentLanguage === 'zh' ? '希腊' : 'Греция',
+        '巴西': currentLanguage === 'zh' ? '巴西' : 'Бразилия',
+        '墨西哥': currentLanguage === 'zh' ? '墨西哥' : 'Мексика',
+        '韩国': currentLanguage === 'zh' ? '韩国' : 'Корея',
+        '泰国': currentLanguage === 'zh' ? '泰国' : 'Таиланд',
+        '澳大利亚': currentLanguage === 'zh' ? '澳大利亚' : 'Австралия',
+        '加拿大': currentLanguage === 'zh' ? '加拿大' : 'Канада'
     };
     
-    const professions = currentLanguage === 'zh' ? {
-        '骑士': '骑士',
-        '巫师': '巫师',
-        '弓箭手': '弓箭手',
-        '战士': '战士',
-        '法师': '法师',
-        '盗贼': '盗贼',
-        '牧师': '牧师',
-        '商人': '商人',
-        '农民': '农民',
-        '学者': '学者',
-        '艺术家': '艺术家',
-        '医生': '医生',
-        '工程师': '工程师',
-        '教师': '教师',
-        '厨师': '厨师',
-        '水手': '水手',
-        '猎人': '猎人',
-        '铁匠': '铁匠',
-        '炼金术士': '炼金术士',
-        '吟游诗人': '吟游诗人'
-    } : {
-        'Рыцарь': 'Рыцарь',
-        'Волшебник': 'Волшебник',
-        'Лучник': 'Лучник',
-        'Воин': 'Воин',
-        'Маг': 'Маг',
-        'Вор': 'Вор',
-        'Священник': 'Священник',
-        'Торговец': 'Торговец',
-        'Фермер': 'Фермер',
-        'Ученый': 'Ученый',
-        'Художник': 'Художник',
-        'Доктор': 'Доктор',
-        'Инженер': 'Инженер',
-        'Учитель': 'Учитель',
-        'Повар': 'Повар',
-        'Моряк': 'Моряк',
-        'Охотник': 'Охотник',
-        'Кузнец': 'Кузнец',
-        'Алхимик': 'Алхимик',
-        'Бард': 'Бард'
+    const professions = {
+        '骑士': currentLanguage === 'zh' ? '骑士' : 'Рыцарь',
+        '巫师': currentLanguage === 'zh' ? '巫师' : 'Волшебник',
+        '弓箭手': currentLanguage === 'zh' ? '弓箭手' : 'Лучник',
+        '战士': currentLanguage === 'zh' ? '战士' : 'Воин',
+        '法师': currentLanguage === 'zh' ? '法师' : 'Маг',
+        '盗贼': currentLanguage === 'zh' ? '盗贼' : 'Вор',
+        '牧师': currentLanguage === 'zh' ? '牧师' : 'Священник',
+        '商人': currentLanguage === 'zh' ? '商人' : 'Торговец',
+        '农民': currentLanguage === 'zh' ? '农民' : 'Фермер',
+        '学者': currentLanguage === 'zh' ? '学者' : 'Ученый',
+        '艺术家': currentLanguage === 'zh' ? '艺术家' : 'Художник',
+        '医生': currentLanguage === 'zh' ? '医生' : 'Доктор',
+        '工程师': currentLanguage === 'zh' ? '工程师' : 'Инженер',
+        '教师': currentLanguage === 'zh' ? '教师' : 'Учитель',
+        '厨师': currentLanguage === 'zh' ? '厨师' : 'Повар',
+        '水手': currentLanguage === 'zh' ? '水手' : 'Моряк',
+        '猎人': currentLanguage === 'zh' ? '猎人' : 'Охотник',
+        '铁匠': currentLanguage === 'zh' ? '铁匠' : 'Кузнец',
+        '炼金术士': currentLanguage === 'zh' ? '炼金术士' : 'Алхимик',
+        '吟游诗人': currentLanguage === 'zh' ? '吟游诗人' : 'Бард'
     };
     
-    const fantasyRaces = currentLanguage === 'zh' ? {
-        '人类': '人类',
-        '精灵': '精灵',
-        '矮人': '矮人',
-        '兽人': '兽人',
-        '龙族': '龙族',
-        '天使': '天使',
-        '恶魔': '恶魔',
-        '吸血鬼': '吸血鬼',
-        '狼人': '狼人',
-        '妖精': '妖精',
-        '元素生物': '元素生物',
-        '机械生命': '机械生命',
-        '亡灵': '亡灵',
-        '半人马': '半人马',
-        '巨魔': '巨魔',
-        '哥布林': '哥布林',
-        '娜迦': '娜迦',
-        '德鲁伊': '德鲁伊'
-    } : {
-        'Человек': 'Человек',
-        'Эльф': 'Эльф',
-        'Гном': 'Гном',
-        'Орк': 'Орк',
-        'Дракон': 'Дракон',
-        'Ангел': 'Ангел',
-        'Демон': 'Демон',
-        'Вампир': 'Вампир',
-        'Оборотень': 'Оборотень',
-        'Фея': 'Фея',
-        'Элементаль': 'Элементаль',
-        'Механическое существо': 'Механическое существо',
-        'Нежить': 'Нежить',
-        'Кентавр': 'Кентавр',
-        'Тролль': 'Тролль',
-        'Гоблин': 'Гоблин',
-        'Нага': 'Нага',
-        'Друид': 'Друид'
+    const fantasyRaces = {
+        '人类': currentLanguage === 'zh' ? '人类' : 'Человек',
+        '精灵': currentLanguage === 'zh' ? '精灵' : 'Эльф',
+        '矮人': currentLanguage === 'zh' ? '矮人' : 'Гном',
+        '兽人': currentLanguage === 'zh' ? '兽人' : 'Орк',
+        '龙族': currentLanguage === 'zh' ? '龙族' : 'Дракон',
+        '天使': currentLanguage === 'zh' ? '天使' : 'Ангел',
+        '恶魔': currentLanguage === 'zh' ? '恶魔' : 'Демон',
+        '吸血鬼': currentLanguage === 'zh' ? '吸血鬼' : 'Вампир',
+        '狼人': currentLanguage === 'zh' ? '狼人' : 'Оборотень',
+        '妖精': currentLanguage === 'zh' ? '妖精' : 'Фея',
+        '元素生物': currentLanguage === 'zh' ? '元素生物' : 'Элементаль',
+        '机械生命': currentLanguage === 'zh' ? '机械生命' : 'Механическое существо',
+        '亡灵': currentLanguage === 'zh' ? '亡灵' : 'Нежить',
+        '半人马': currentLanguage === 'zh' ? '半人马' : 'Кентавр',
+        '巨魔': currentLanguage === 'zh' ? '巨魔' : 'Тролль',
+        '哥布林': currentLanguage === 'zh' ? '哥布林' : 'Гоблин',
+        '娜迦': currentLanguage === 'zh' ? '娜迦' : 'Нага',
+        '德鲁伊': currentLanguage === 'zh' ? '德鲁伊' : 'Друид'
     };
     
     const customText = currentLanguage === 'zh' ? '自定义...' : 'Свой вариант...';
@@ -1012,13 +1036,56 @@ function getExtendedRussianTranslation(chineseText) {
     };
     
     // 首先尝试原有的翻译表
-    const originalTranslation = getRussianTranslation(chineseText);
+    const originalTranslation = getBasicRussianTranslation(chineseText);
     if (originalTranslation !== chineseText) {
         return originalTranslation;
     }
     
     // 然后尝试扩展翻译表
     return extendedTranslations[chineseText] || chineseText;
+}
+
+// 基础俄语翻译函数
+function getBasicRussianTranslation(chineseText) {
+    const basicTranslations = {
+        // 性别
+        '男': 'мужчина',
+        '女': 'женщина',
+        
+        // 颜色
+        '黑色': 'черный',
+        '棕色': 'коричневый',
+        '金色': 'золотой',
+        '红色': 'красный',
+        '白色': 'белый',
+        '银色': 'серебряный',
+        '蓝色': 'синий',
+        '紫色': 'фиолетовый',
+        '绿色': 'зеленый',
+        '粉色': 'розовый',
+        
+        // 国家
+        '中国': 'Китай',
+        '俄罗斯': 'Россия',
+        '英国': 'Великобритания',
+        '日本': 'Япония',
+        '法国': 'Франция',
+        '德国': 'Германия',
+        '美国': 'США',
+        '印度': 'Индия',
+        
+        // 职业
+        '骑士': 'рыцарь',
+        '巫师': 'волшебник',
+        '战士': 'воин',
+        '法师': 'маг',
+        '商人': 'торговец',
+        '农民': 'фермер',
+        '医生': 'доктор',
+        '教师': 'учитель'
+    };
+    
+    return basicTranslations[chineseText] || chineseText;
 }
 
 async function generateCustomCharacter() {
@@ -1044,7 +1111,7 @@ async function generateCustomCharacter() {
     };
     
     // 根据当前语言决定使用原始值还是翻译后的值
-    const request = currentLanguage === 'zh' ? {
+    const request = {
         gender: rawValues.gender,
         age: rawValues.age,
         height: rawValues.height,
@@ -1056,22 +1123,9 @@ async function generateCustomCharacter() {
         nationality: rawValues.nationality,
         fantasy_race: rawValues.fantasy_race,
         language: currentLanguage
-    } : {
-        // 俄语模式下使用扩展翻译函数
-        gender: getExtendedRussianTranslation(rawValues.gender),
-        age: rawValues.age.replace('岁', ' лет').replace('cm', ' см').replace('kg', ' кг'),
-        height: rawValues.height.replace('cm', ' см'),
-        weight: rawValues.weight.replace('kg', ' кг'),
-        hair_color: getExtendedRussianTranslation(rawValues.hair_color),
-        eye_color: getExtendedRussianTranslation(rawValues.eye_color),
-        profession: getExtendedRussianTranslation(rawValues.profession),
-        personality: getExtendedRussianTranslation(rawValues.personality),
-        nationality: getExtendedRussianTranslation(rawValues.nationality),
-        fantasy_race: getExtendedRussianTranslation(rawValues.fantasy_race),
-        language: currentLanguage
     };
     
-    // 使用统一的扩展翻译函数处理俄语请求
+    // 如果是俄语模式，使用扩展翻译函数处理所有字段
     const localizedRequest = {...request};
     
     if (currentLanguage === 'ru') {

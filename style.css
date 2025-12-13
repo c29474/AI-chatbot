@@ -50,13 +50,13 @@ body {
     min-height: 0; /* 确保flex容器可以收缩 */
     width: 350px;
     transition: all 0.3s ease;
-    transform: translateX(100%);
-    opacity: 0;
-}
-
-.sidebar.active {
     transform: translateX(0);
     opacity: 1;
+}
+
+.sidebar:not(.active) {
+    transform: translateX(100%);
+    opacity: 0;
 }
 
 .chat-header {
@@ -531,7 +531,7 @@ body {
     text-align: center;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 移动端适配 */
 @media (max-width: 768px) {
     .chat-container {
         width: 100%;
