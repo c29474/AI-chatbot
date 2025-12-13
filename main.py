@@ -13,6 +13,7 @@ from urllib.parse import urlparse, urlencode
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Union
 import websocket
@@ -54,6 +55,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve static files (but not for API routes)
+# We need to serve individual static files since we're not mounting the whole directory
+@app.get("/script.js", response_class=FileResponse)
+async def get_script():
+    return "script.js"
+
+@app.get("/style.css", response_class=FileResponse)
+async def get_style():
+    return "style.css"
+
+@app.get("/", response_class=FileResponse)
+async def get_index():
+    return "index.html"
 
 # ==================== 数据模型 ====================
 class ChatRequest(BaseModel):
