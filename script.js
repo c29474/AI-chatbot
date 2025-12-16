@@ -626,108 +626,226 @@ function updateCharacterForm() {
     const t = translations[currentLanguage];
     const characterFormDiv = document.getElementById('characterForm');
     
-    // 双语选项数据 - 修复：选项值使用统一的中文键名，显示文本根据语言切换
-    const hairColors = {
-        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
-        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
-        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
-        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
-        '白色': currentLanguage === 'zh' ? '白色' : 'Белый',
-        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный',
-        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
-        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
-        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
-        '粉色': currentLanguage === 'zh' ? '粉色' : 'Розовый'
+    // 双语选项数据 - 修复：保持键值对的一致性
+    const createBilingualOptions = (zhOptions, ruOptions) => {
+        if (currentLanguage === 'zh') {
+            return zhOptions;
+        } else {
+            // 在俄语模式下，使用中文键和俄语值的组合
+            // 这样可以确保API接收到正确的中文键，同时显示俄语值给用户
+            return ruOptions;
+        }
     };
     
-    const eyeColors = {
-        '黑色': currentLanguage === 'zh' ? '黑色' : 'Черный',
-        '棕色': currentLanguage === 'zh' ? '棕色' : 'Коричневый',
-        '蓝色': currentLanguage === 'zh' ? '蓝色' : 'Синий',
-        '绿色': currentLanguage === 'zh' ? '绿色' : 'Зеленый',
-        '灰色': currentLanguage === 'zh' ? '灰色' : 'Серый',
-        '琥珀色': currentLanguage === 'zh' ? '琥珀色' : 'Янтарный',
-        '紫色': currentLanguage === 'zh' ? '紫色' : 'Фиолетовый',
-        '红色': currentLanguage === 'zh' ? '红色' : 'Красный',
-        '金色': currentLanguage === 'zh' ? '金色' : 'Золотой',
-        '银色': currentLanguage === 'zh' ? '银色' : 'Серебряный'
-    };
+    const hairColors = createBilingualOptions(
+        {
+            '黑色': '黑色',
+            '棕色': '棕色',
+            '金色': '金色',
+            '红色': '红色',
+            '白色': '白色',
+            '银色': '银色',
+            '蓝色': '蓝色',
+            '紫色': '紫色',
+            '绿色': '绿色',
+            '粉色': '粉色'
+        },
+        {
+            'черный': 'Черный',
+            'коричневый': 'Коричневый',
+            'золотой': 'Золотой',
+            'красный': 'Красный',
+            'белый': 'Белый',
+            'серебряный': 'Серебряный',
+            'синий': 'Синий',
+            'фиолетовый': 'Фиолетовый',
+            'зеленый': 'Зеленый',
+            'розовый': 'Розовый'
+        }
+    );
     
-    const personalities = {
-        '勇敢，忠诚': currentLanguage === 'zh' ? '勇敢，忠诚' : 'Храбрый, верный',
-        '智慧，神秘': currentLanguage === 'zh' ? '智慧，神秘' : 'Мудрый, таинственный',
-        '温和，优雅': currentLanguage === 'zh' ? '温和，优雅' : 'Мягкий, элегантный',
-        '敏捷，坚韧': currentLanguage === 'zh' ? '敏捷，坚韧' : 'Проворный, стойкий',
-        '诚实，幽默': currentLanguage === 'zh' ? '诚实，幽默' : 'Честный, юмористичный',
-        '热情，冷静': currentLanguage === 'zh' ? '热情，冷静' : 'Страстный, спокойный',
-        '果断，谨慎': currentLanguage === 'zh' ? '果断，谨慎' : 'Решительный, осторожный',
-        '乐观，外向': currentLanguage === 'zh' ? '乐观，外向' : 'Оптимистичный, экстравертный'
-    };
+    const eyeColors = createBilingualOptions(
+        {
+            '黑色': '黑色',
+            '棕色': '棕色',
+            '蓝色': '蓝色',
+            '绿色': '绿色',
+            '灰色': '灰色',
+            '琥珀色': '琥珀色',
+            '紫色': '紫色',
+            '红色': '红色',
+            '金色': '金色',
+            '银色': '银色'
+        },
+        {
+            'черный': 'Черный',
+            'коричневый': 'Коричневый',
+            'синий': 'Синий',
+            'зеленый': 'Зеленый',
+            'серый': 'Серый',
+            'янтарный': 'Янтарный',
+            'фиолетовый': 'Фиолетовый',
+            'красный': 'Красный',
+            'золотой': 'Золотой',
+            'серебряный': 'Серебряный'
+        }
+    );
     
-    const nationalities = {
-        '中国': currentLanguage === 'zh' ? '中国' : 'Китай',
-        '俄罗斯': currentLanguage === 'zh' ? '俄罗斯' : 'Россия',
-        '英国': currentLanguage === 'zh' ? '英国' : 'Великобритания',
-        '日本': currentLanguage === 'zh' ? '日本' : 'Япония',
-        '法国': currentLanguage === 'zh' ? '法国' : 'Франция',
-        '德国': currentLanguage === 'zh' ? '德国' : 'Германия',
-        '意大利': currentLanguage === 'zh' ? '意大利' : 'Италия',
-        '西班牙': currentLanguage === 'zh' ? '西班牙' : 'Испания',
-        '美国': currentLanguage === 'zh' ? '美国' : 'США',
-        '印度': currentLanguage === 'zh' ? '印度' : 'Индия',
-        '埃及': currentLanguage === 'zh' ? '埃及' : 'Египет',
-        '希腊': currentLanguage === 'zh' ? '希腊' : 'Греция',
-        '巴西': currentLanguage === 'zh' ? '巴西' : 'Бразилия',
-        '墨西哥': currentLanguage === 'zh' ? '墨西哥' : 'Мексика',
-        '韩国': currentLanguage === 'zh' ? '韩国' : 'Корея',
-        '泰国': currentLanguage === 'zh' ? '泰国' : 'Таиланд',
-        '澳大利亚': currentLanguage === 'zh' ? '澳大利亚' : 'Австралия',
-        '加拿大': currentLanguage === 'zh' ? '加拿大' : 'Канада'
-    };
+    const personalities = createBilingualOptions(
+        {
+            '勇敢，忠诚': '勇敢，忠诚',
+            '智慧，神秘': '智慧，神秘',
+            '温和，优雅': '温和，优雅',
+            '敏捷，坚韧': '敏捷，坚韧',
+            '诚实，幽默': '诚实，幽默',
+            '热情，冷静': '热情，冷静',
+            '果断，谨慎': '果断，谨慎',
+            '乐观，外向': '乐观，外向'
+        },
+        {
+            '勇敢，忠诚': 'Храбрый, верный',
+            '智慧，神秘': 'Мудрый, таинственный',
+            '温和，优雅': 'Мягкий, элегантный',
+            '敏捷，坚韧': 'Проворный, стойкий',
+            '诚实，幽默': 'Честный, юмористичный',
+            '热情，冷静': 'Страстный, спокойный',
+            '果断，谨慎': 'Решительный, осторожный',
+            '乐观，外向': 'Оптимистичный, экстравертный'
+        }
+    );
     
-    const professions = {
-        '骑士': currentLanguage === 'zh' ? '骑士' : 'Рыцарь',
-        '巫师': currentLanguage === 'zh' ? '巫师' : 'Волшебник',
-        '弓箭手': currentLanguage === 'zh' ? '弓箭手' : 'Лучник',
-        '战士': currentLanguage === 'zh' ? '战士' : 'Воин',
-        '法师': currentLanguage === 'zh' ? '法师' : 'Маг',
-        '盗贼': currentLanguage === 'zh' ? '盗贼' : 'Вор',
-        '牧师': currentLanguage === 'zh' ? '牧师' : 'Священник',
-        '商人': currentLanguage === 'zh' ? '商人' : 'Торговец',
-        '农民': currentLanguage === 'zh' ? '农民' : 'Фермер',
-        '学者': currentLanguage === 'zh' ? '学者' : 'Ученый',
-        '艺术家': currentLanguage === 'zh' ? '艺术家' : 'Художник',
-        '医生': currentLanguage === 'zh' ? '医生' : 'Доктор',
-        '工程师': currentLanguage === 'zh' ? '工程师' : 'Инженер',
-        '教师': currentLanguage === 'zh' ? '教师' : 'Учитель',
-        '厨师': currentLanguage === 'zh' ? '厨师' : 'Повар',
-        '水手': currentLanguage === 'zh' ? '水手' : 'Моряк',
-        '猎人': currentLanguage === 'zh' ? '猎人' : 'Охотник',
-        '铁匠': currentLanguage === 'zh' ? '铁匠' : 'Кузнец',
-        '炼金术士': currentLanguage === 'zh' ? '炼金术士' : 'Алхимик',
-        '吟游诗人': currentLanguage === 'zh' ? '吟游诗人' : 'Бард'
-    };
+    const nationalities = createBilingualOptions(
+        {
+            '中国': '中国',
+            '俄罗斯': '俄罗斯',
+            '英国': '英国',
+            '日本': '日本',
+            '法国': '法国',
+            '德国': '德国',
+            '意大利': '意大利',
+            '西班牙': '西班牙',
+            '美国': '美国',
+            '印度': '印度',
+            '埃及': '埃及',
+            '希腊': '希腊',
+            '巴西': '巴西',
+            '墨西哥': '墨西哥',
+            '韩国': '韩国',
+            '泰国': '泰国',
+            '澳大利亚': '澳大利亚',
+            '加拿大': '加拿大'
+        },
+        {
+            'Китай': 'Китай',
+            'Россия': 'Россия',
+            'Великобритания': 'Великобритания',
+            'Япония': 'Япония',
+            'Франция': 'Франция',
+            'Германия': 'Германия',
+            'Италия': 'Италия',
+            'Испания': 'Испания',
+            'США': 'США',
+            'Индия': 'Индия',
+            'Египет': 'Египет',
+            'Греция': 'Греция',
+            'Бразилия': 'Бразилия',
+            'Мексика': 'Мексика',
+            'Корея': 'Корея',
+            'Таиланд': 'Таиланд',
+            'Австралия': 'Австралия',
+            'Канада': 'Канада'
+        }
+    );
     
-    const fantasyRaces = {
-        '人类': currentLanguage === 'zh' ? '人类' : 'Человек',
-        '精灵': currentLanguage === 'zh' ? '精灵' : 'Эльф',
-        '矮人': currentLanguage === 'zh' ? '矮人' : 'Гном',
-        '兽人': currentLanguage === 'zh' ? '兽人' : 'Орк',
-        '龙族': currentLanguage === 'zh' ? '龙族' : 'Дракон',
-        '天使': currentLanguage === 'zh' ? '天使' : 'Ангел',
-        '恶魔': currentLanguage === 'zh' ? '恶魔' : 'Демон',
-        '吸血鬼': currentLanguage === 'zh' ? '吸血鬼' : 'Вампир',
-        '狼人': currentLanguage === 'zh' ? '狼人' : 'Оборотень',
-        '妖精': currentLanguage === 'zh' ? '妖精' : 'Фея',
-        '元素生物': currentLanguage === 'zh' ? '元素生物' : 'Элементаль',
-        '机械生命': currentLanguage === 'zh' ? '机械生命' : 'Механическое существо',
-        '亡灵': currentLanguage === 'zh' ? '亡灵' : 'Нежить',
-        '半人马': currentLanguage === 'zh' ? '半人马' : 'Кентавр',
-        '巨魔': currentLanguage === 'zh' ? '巨魔' : 'Тролль',
-        '哥布林': currentLanguage === 'zh' ? '哥布林' : 'Гоблин',
-        '娜迦': currentLanguage === 'zh' ? '娜迦' : 'Нага',
-        '德鲁伊': currentLanguage === 'zh' ? '德鲁伊' : 'Друид'
-    };
+    const professions = createBilingualOptions(
+        {
+            '骑士': '骑士',
+            '巫师': '巫师',
+            '弓箭手': '弓箭手',
+            '战士': '战士',
+            '法师': '法师',
+            '盗贼': '盗贼',
+            '牧师': '牧师',
+            '商人': '商人',
+            '农民': '农民',
+            '学者': '学者',
+            '艺术家': '艺术家',
+            '医生': '医生',
+            '工程师': '工程师',
+            '教师': '教师',
+            '厨师': '厨师',
+            '水手': '水手',
+            '猎人': '猎人',
+            '铁匠': '铁匠',
+            '炼金术士': '炼金术士',
+            '吟游诗人': '吟游诗人'
+        },
+        {
+            'рыцарь': 'Рыцарь',
+            'волшебник': 'Волшебник',
+            'лучник': 'Лучник',
+            'воин': 'Воин',
+            'маг': 'Маг',
+            'вор': 'Вор',
+            'жрец': 'Жрец',
+            'торговец': 'Торговец',
+            'фермер': 'Фермер',
+            'ученый': 'Ученый',
+            'художник': 'Художник',
+            'врач': 'Врач',
+            'инженер': 'Инженер',
+            'учитель': 'Учитель',
+            'повар': 'Повар',
+            'моряк': 'Моряк',
+            'охотник': 'Охотник',
+            'кузнец': 'Кузнец',
+            'алхимик': 'Алхимик',
+            'бард': 'Бард'
+        }
+    );
+    
+    const fantasyRaces = createBilingualOptions(
+        {
+            '人类': '人类',
+            '精灵': '精灵',
+            '矮人': '矮人',
+            '兽人': '兽人',
+            '龙族': '龙族',
+            '天使': '天使',
+            '恶魔': '恶魔',
+            '吸血鬼': '吸血鬼',
+            '狼人': '狼人',
+            '妖精': '妖精',
+            '元素生物': '元素生物',
+            '机械生命': '机械生命',
+            '亡灵': '亡灵',
+            '半人马': '半人马',
+            '巨魔': '巨魔',
+            '哥布林': '哥布林',
+            '娜迦': '娜迦',
+            '德鲁伊': '德鲁伊'
+        },
+        {
+            'человек': 'Человек',
+            'эльф': 'Эльф',
+            'гном': 'Гном',
+            'орк': 'Орк',
+            'дракон': 'Дракон',
+            'ангел': 'Ангел',
+            'демон': 'Демон',
+            'вампир': 'Вампир',
+            'оборотень': 'Оборотень',
+            'фея': 'Фея',
+            'элементаль': 'Элементаль',
+            'механическое существо': 'Механическое существо',
+            'нежить': 'Нежить',
+            'кентавр': 'Кентавр',
+            'тролль': 'Тролль',
+            'гоблин': 'Гоблин',
+            'нага': 'Нага',
+            'друид': 'Друид'
+        }
+    );
     
     const customText = currentLanguage === 'zh' ? '自定义...' : 'Свой вариант...';
     const customHairPlaceholder = currentLanguage === 'zh' ? '输入自定义发色' : 'Введите свой цвет волос';
@@ -898,6 +1016,11 @@ function setupCustomInputHandlers() {
 
 // 扩展翻译映射表，添加更多中文词汇的俄语翻译
 function getExtendedRussianTranslation(chineseText) {
+    // 如果已经是俄语文本，直接返回
+    if (/[а-яё]/i.test(chineseText)) {
+        return chineseText;
+    }
+    
     // 扩展的翻译映射表
     const extendedTranslations = {
         // 性别
@@ -1125,11 +1248,11 @@ async function generateCustomCharacter() {
         language: currentLanguage
     };
     
-    // 如果是俄语模式，使用扩展翻译函数处理所有字段
+    // 根据当前语言决定使用原始值还是翻译后的值
     const localizedRequest = {...request};
     
     if (currentLanguage === 'ru') {
-        // 使用getExtendedRussianTranslation函数进行翻译
+        // 使用getExtendedRussianTranslation函数进行完整翻译
         localizedRequest.gender = getExtendedRussianTranslation(request.gender);
         localizedRequest.hair_color = getExtendedRussianTranslation(request.hair_color);
         localizedRequest.eye_color = getExtendedRussianTranslation(request.eye_color);
@@ -1142,11 +1265,20 @@ async function generateCustomCharacter() {
             const personalities = request.personality.replace(/，/g, ',').split(',');
             const translatedPersonalities = personalities.map(p => {
                 const trimmed = p.trim();
+                // 检查是否已经是俄语
+                if (/[а-яё]/i.test(trimmed)) {
+                    return trimmed;
+                }
                 return getExtendedRussianTranslation(trimmed);
             });
             localizedRequest.personality = translatedPersonalities.join(', ');
         } else {
-            localizedRequest.personality = getExtendedRussianTranslation(request.personality);
+            // 检查是否已经是俄语
+            if (/[а-яё]/i.test(request.personality)) {
+                localizedRequest.personality = request.personality;
+            } else {
+                localizedRequest.personality = getExtendedRussianTranslation(request.personality);
+            }
         }
         
         // 翻译单位
@@ -1163,13 +1295,13 @@ async function generateCustomCharacter() {
         - 发色：${request.hair_color}，瞳色：${request.eye_color}
         - 性格：${request.personality}
         - 种族：${request.fantasy_race}` :
-        `Создать персонажа ${getExtendedRussianTranslation(request.nationality)} ${getExtendedRussianTranslation(request.profession)}：
-        - Пол: ${getExtendedRussianTranslation(request.gender)}
-        - Возраст: ${request.age.replace('岁', ' лет').replace('cm', ' см').replace('kg', ' кг')}
-        - Рост: ${request.height.replace('cm', ' см')}, Вес: ${request.weight.replace('kg', ' кг')}
-        - Цвет волос: ${getExtendedRussianTranslation(request.hair_color)}, Цвет глаз: ${getExtendedRussianTranslation(request.eye_color)}
-        - Характер: ${getExtendedRussianTranslation(request.personality)}
-        - Раса: ${getExtendedRussianTranslation(request.fantasy_race)}`;
+        `Создать персонажа ${localizedRequest.nationality} ${localizedRequest.profession}：
+        - Пол: ${localizedRequest.gender}
+        - Возраст: ${localizedRequest.age}
+        - Рост: ${localizedRequest.height}, Вес: ${localizedRequest.weight}
+        - Цвет волос: ${localizedRequest.hair_color}, Цвет глаз: ${localizedRequest.eye_color}
+        - Характер: ${localizedRequest.personality}
+        - Раса: ${localizedRequest.fantasy_race}`;
     
     // Добавление сообщения пользователя
     addMessage(promptText, true);
@@ -1178,7 +1310,7 @@ async function generateCustomCharacter() {
     showTypingIndicator();
     
     try {
-        const response = await callApi('generate/character', 'POST', request);
+        const response = await callApi('generate/character', 'POST', localizedRequest);
         
         // 调试：打印完整响应
         console.log('[角色生成] 完整响应:', response);
