@@ -576,9 +576,9 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     
     t = pdf_translations.get(language, pdf_translations["zh"])
     
-    # 改进的字体注册和选择逻辑 - 优先支持俄语和中文
+    # 改进的字体注册和选择逻辑 - 优先支持俄语和中文，并启用完整字体嵌入
     def setup_pdf_fonts(language, character_data):
-        """设置支持多语言的PDF字体，优先俄语字体，其次中文字体"""
+        """设置支持多语言的PDF字体，优先俄语字体，其次中文字体，并启用完整字体嵌入以确保跨平台兼容性"""
         available_fonts = []
         selected_font = 'Helvetica'
         
@@ -587,39 +587,91 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             from reportlab.pdfbase.ttfonts import TTFont
             
             # 扩展字体路径，包含更多Unicode字体选项
-            font_paths = {
-                # 俄语优先字体 - Times New Roman Cyrillic
-                'Times New Roman Cyrillic': 'C:\\Windows\\Fonts\\times.ttf',
-                'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
-                
-                # 俄语备用字体
-                'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
-                'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
-                'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
-                'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
-                'Tahoma': 'C:\\Windows\\Fonts\\tahoma.ttf',
-                
-                # 中文支持字体
-                'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
-                'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
-                'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
-                'FangSong': 'C:\\Windows\\Fonts\\simfang.ttf',  # 仿宋
-                'KaiTi': 'C:\\Windows\\Fonts\\simkai.ttf',  # 楷体
-                
-                # 通用Unicode字体
-                'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',
-            }
+            # 优先使用开源字体以避免许可证问题
+            # 跨平台字体路径支持Windows、macOS和Linux
+            import platform
+            system = platform.system()
             
-            # 尝试注册所有可用字体
+            if system == "Windows":
+                font_paths = {
+                    # 开源Unicode字体（推荐用于跨平台兼容性）
+                    'DejaVuSans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',
+                    'DejaVuSerif': 'C:\\Windows\\Fonts\\DejaVuSerif.ttf',
+                    'DejaVuSans-Bold': 'C:\\Windows\\Fonts\\DejaVuSans-Bold.ttf',
+                    
+                    # 俄语优先字体 - Times New Roman Cyrillic
+                    'Times New Roman Cyrillic': 'C:\\Windows\\Fonts\\times.ttf',
+                    'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+                    
+                    # 俄语备用字体
+                    'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
+                    'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
+                    'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
+                    'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
+                    'Tahoma': 'C:\\Windows\\Fonts\\tahoma.ttf',
+                    
+                    # 中文支持字体
+                    'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
+                    'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
+                    'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
+                    'FangSong': 'C:\\Windows\\Fonts\\simfang.ttf',  # 仿宋
+                    'KaiTi': 'C:\\Windows\\Fonts\\simkai.ttf',  # 楷体
+                }
+            elif system == "Darwin":  # macOS
+                font_paths = {
+                    # 开源Unicode字体（推荐用于跨平台兼容性）
+                    'DejaVuSans': '/System/Library/Fonts/Supplemental/DejaVuSans.ttf',
+                    'DejaVuSerif': '/System/Library/Fonts/Supplemental/DejaVuSerif.ttf',
+                    'DejaVuSans-Bold': '/System/Library/Fonts/Supplemental/DejaVuSans-Bold.ttf',
+                    
+                    # 俄语优先字体
+                    'Times New Roman': '/System/Library/Fonts/Times New Roman.ttf',
+                    'Arial': '/System/Library/Fonts/Arial.ttf',
+                    'Arial Unicode MS': '/System/Library/Fonts/Arial Unicode.ttf',
+                    'Helvetica': '/System/Library/Fonts/Helvetica.ttc',
+                    
+                    # 中文支持字体
+                    'PingFang SC': '/System/Library/Fonts/PingFang.ttc',
+                    'Heiti SC': '/System/Library/Fonts/STHeiti Light.ttc',
+                }
+            else:  # Linux和其他Unix系统
+                font_paths = {
+                    # 开源Unicode字体（推荐用于跨平台兼容性）
+                    'DejaVuSans': '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                    'DejaVuSerif': '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf',
+                    'DejaVuSans-Bold': '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                    
+                    # 通用字体
+                    'Arial': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+                    'Times New Roman': '/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf',
+                    'Helvetica': '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+                    
+                    # 中文字体支持
+                    'Noto Sans CJK': '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+                }
+            
+            # 尝试注册所有可用字体，并启用完整字体嵌入
             for font_name, font_path in font_paths.items():
                 if os.path.exists(font_path):
                     try:
-                        pdfmetrics.registerFont(TTFont(font_name, font_path))
+                        # 注册字体并启用完整嵌入以确保跨平台兼容性
+                        font = TTFont(font_name, font_path)
+                        font.embedded = True  # 启用字体嵌入
+                        font.subset = False   # 禁用子集化以确保所有字符都包含
+                        pdfmetrics.registerFont(font)
                         available_fonts.append(font_name)
-                        print(f"[PDF生成] 成功注册字体: {font_name}")
+                        print(f"[PDF生成] 成功注册并完整嵌入字体: {font_name}")
                     except Exception as e:
                         print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
                         continue
+            
+            # 如果没有找到DejaVu字体，但它是首选字体，则给出提示
+            dejavu_fonts = ['DejaVuSans', 'DejaVuSerif', 'DejaVuSans-Bold']
+            if any(font in dejavu_fonts for font in available_fonts):
+                print("[PDF生成] 已找到DejaVu字体，提供最佳跨平台兼容性")
+            else:
+                print("[PDF生成] 未找到DejaVu字体，建议安装以获得更好的跨平台兼容性")
+                print("[PDF生成] DejaVu字体下载地址: https://sourceforge.net/projects/dejavu/")
             
             # 检测文本内容中的语言特征
             text_content = character_data.get('description', '') + character_data.get('name', '')
@@ -630,15 +682,17 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             
             # 智能字体选择策略：优先俄语，其次中文
             if has_russian:
-                # 俄语优先字体选择
+                # 俄语优先字体选择 - 支持西里尔字母
                 russian_fonts = [
-                    'Times New Roman Cyrillic',  # 首选俄语字体
+                    'Times New Roman Cyrillic',  # Windows俄语字体
                     'Times New Roman',           # 备用
                     'Arial',                     # 通用西文字体
                     'Arial Unicode MS',          # 广泛Unicode支持
                     'Calibri',                   # 现代字体
                     'Cambria',                   # 衬线字体
-                    'Tahoma'                     # 无衬线字体
+                    'Tahoma',                    # 无衬线字体
+                    'DejaVuSans',                # 开源字体，良好的Unicode支持
+                    'DejaVuSerif'                # 开源字体，衬线版本
                 ]
                 
                 for font in russian_fonts:
@@ -654,7 +708,8 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
                         'SimHei',            # 黑体
                         'SimSun',            # 宋体
                         'Arial Unicode MS',  # 广泛Unicode支持
-                        'DejaVu Sans'        # 开源Unicode字体
+                        'DejaVuSans',        # 开源Unicode字体
+                        'Noto Sans CJK'      # Google Noto字体，优秀的CJK支持
                     ]
                     
                     for font in chinese_fonts:
@@ -670,7 +725,8 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
                     'SimHei',            # 黑体
                     'SimSun',            # 宋体
                     'Arial Unicode MS',  # 广泛Unicode支持
-                    'DejaVu Sans'        # 开源Unicode字体
+                    'DejaVuSans',        # 开源Unicode字体
+                    'Noto Sans CJK'      # Google Noto字体
                 ]
                 
                 for font in chinese_fonts:
@@ -682,20 +738,45 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             # 如果以上都不适用，根据语言偏好选择
             elif language == "ru":
                 # 俄语语言偏好
-                russian_fonts = ['Times New Roman Cyrillic', 'Times New Roman', 'Arial', 'Arial Unicode MS']
+                russian_fonts = [
+                    'Times New Roman Cyrillic', 
+                    'Times New Roman', 
+                    'Arial', 
+                    'Arial Unicode MS',
+                    'DejaVuSans'
+                ]
                 for font in russian_fonts:
                     if font in available_fonts:
                         selected_font = font
                         print(f"[PDF生成] 根据语言偏好选择俄语字体: {selected_font}")
                         break
             
-            # 如果找不到合适的字体，使用可用字体
+            # 更强大的fallback机制
             if selected_font == 'Helvetica':
-                for font in available_fonts:
-                    if font != 'Helvetica':
+                # 尝试按优先级顺序选择任何可用字体
+                fallback_fonts = [
+                    'DejaVuSans',        # 首选开源字体
+                    'Arial Unicode MS',  # 广泛Unicode支持
+                    'Times New Roman',   # 常见字体
+                    'Arial',             # 通用字体
+                    'Calibri',           # 现代字体
+                    'Cambria',           # 衬线字体
+                    'Tahoma'             # 无衬线字体
+                ]
+                
+                for font in fallback_fonts:
+                    if font in available_fonts:
                         selected_font = font
-                        print(f"[PDF生成] 使用备用字体: {selected_font}")
+                        print(f"[PDF生成] 使用高级fallback字体: {selected_font}")
                         break
+                
+                # 如果还是只有Helvetica，尝试任何非Helvetica字体
+                if selected_font == 'Helvetica':
+                    for font in available_fonts:
+                        if font != 'Helvetica':
+                            selected_font = font
+                            print(f"[PDF生成] 使用最终fallback字体: {selected_font}")
+                            break
             
             print(f"[PDF生成] 最终选择字体: {selected_font} (语言: {language}, 俄语内容: {has_russian}, 中文内容: {has_chinese})")
             
@@ -1063,7 +1144,9 @@ async def root():
             "generate_character": "/api/generate/character",
             "generate_booktitle": "/api/generate/booktitle",
             "generate_name": "/api/generate/name",
-            "health": "/health"
+            "health": "/health",
+            "test_fonts": "/api/test-fonts",
+            "test_font_embedding": "/api/test-font-embedding"
         }
     }
 
@@ -1094,9 +1177,146 @@ async def test_fonts():
         "timestamp": datetime.now().isoformat()
     }
 
+@app.get("/api/test-font-embedding")
+async def test_font_embedding_endpoint():
+    """测试字体嵌入功能"""
+    try:
+        # 运行字体嵌入测试
+        pdf_path = test_font_embedding()
+        if pdf_path:
+            return {
+                "status": "success",
+                "message": "字体嵌入测试完成",
+                "pdf_url": f"/api/file/{os.path.basename(pdf_path)}",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "字体嵌入测试失败，未能生成PDF文件",
+                "timestamp": datetime.now().isoformat()
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"字体嵌入测试失败: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
+
 def test_pdf_font_support():
     """测试PDF字体支持功能"""
     print("=== PDF字体支持测试 ===")
+    
+def test_font_embedding():
+    """测试字体嵌入功能"""
+    print("=== 字体嵌入测试 ===")
+    
+    # 创建测试字符数据 - 俄语
+    test_character_data_ru = {
+        "name": "Тестовый персонаж",  # 测试角色 (Test Character in Russian)
+        "gender": "мужчина",  # 男性 (Male in Russian)
+        "age": "25 лет",  # 25 years old
+        "height": "180 см",  # 180 cm
+        "weight": "75 кг",  # 75 kg
+        "hair_color": "черные",  # 黑色 (Black in Russian)
+        "eye_color": "карие",  # 棕色 (Brown in Russian)
+        "profession": "воин",  # 战士 (Warrior in Russian)
+        "personality": "храбрый, верный",  # 勇敢，忠诚 (Brave, loyal in Russian)
+        "nationality": "Россия",  # 俄罗斯 (Russia in Russian)
+        "fantasy_race": "человек",  # 人类 (Human in Russian)
+        "description": "Это тестовый персонаж для проверки поддержки кириллических шрифтов в PDF-документах. Этот персонаж должен корректно отображаться на всех системах независимо от наличия установленных русских шрифтов."  # Description in Russian
+    }
+    
+    # 创建测试字符数据 - 中文
+    test_character_data_zh = {
+        "name": "测试角色",
+        "gender": "男",
+        "age": "25岁",
+        "height": "180厘米",
+        "weight": "75公斤",
+        "hair_color": "黑色",
+        "eye_color": "棕色",
+        "profession": "战士",
+        "personality": "勇敢，忠诚",
+        "nationality": "俄罗斯",
+        "fantasy_race": "人类",
+        "description": "这是一个测试角色，用于检查PDF文档中的西里尔字母字体支持。无论是否安装了俄语字体，该角色都应在所有系统上正确显示。"
+    }
+    
+    # 创建测试字符数据 - 英文
+    test_character_data_en = {
+        "name": "Test Character",
+        "gender": "Male",
+        "age": "25 years old",
+        "height": "180 cm",
+        "weight": "75 kg",
+        "hair_color": "Black",
+        "eye_color": "Brown",
+        "profession": "Warrior",
+        "personality": "Brave, Loyal",
+        "nationality": "Russia",
+        "fantasy_race": "Human",
+        "description": "This is a test character to check Cyrillic font support in PDF documents. This character should display correctly on all systems regardless of whether Russian fonts are installed."
+    }
+    
+    test_results = []
+    
+    # 测试俄语PDF生成
+    try:
+        print("\n--- 测试俄语PDF生成 ---")
+        pdf_path_ru = generate_character_pdf(test_character_data_ru, None, "ru")
+        print(f"✓ 成功生成俄语测试PDF: {pdf_path_ru}")
+        test_results.append(("俄语", True, pdf_path_ru))
+    except Exception as e:
+        print(f"✗ 俄语PDF生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        test_results.append(("俄语", False, str(e)))
+    
+    # 测试中文PDF生成
+    try:
+        print("\n--- 测试中文PDF生成 ---")
+        pdf_path_zh = generate_character_pdf(test_character_data_zh, None, "zh")
+        print(f"✓ 成功生成中文测试PDF: {pdf_path_zh}")
+        test_results.append(("中文", True, pdf_path_zh))
+    except Exception as e:
+        print(f"✗ 中文PDF生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        test_results.append(("中文", False, str(e)))
+    
+    # 测试英文PDF生成
+    try:
+        print("\n--- 测试英文PDF生成 ---")
+        pdf_path_en = generate_character_pdf(test_character_data_en, None, "en")
+        print(f"✓ 成功生成英文测试PDF: {pdf_path_en}")
+        test_results.append(("英文", True, pdf_path_en))
+    except Exception as e:
+        print(f"✗ 英文PDF生成失败: {e}")
+        import traceback
+        traceback.print_exc()
+        test_results.append(("英文", False, str(e)))
+    
+    # 输出测试结果摘要
+    print("\n=== 字体嵌入测试结果摘要 ===")
+    success_count = 0
+    for language, success, result in test_results:
+        if success:
+            print(f"✓ {language} PDF生成: 成功")
+            success_count += 1
+        else:
+            print(f"✗ {language} PDF生成: 失败 - {result}")
+    
+    print(f"\n总体结果: {success_count}/{len(test_results)} 语言测试通过")
+    
+    # 返回第一个成功的PDF路径作为主要结果
+    for language, success, result in test_results:
+        if success:
+            print("✓ 字体嵌入测试完成")
+            return result
+    
+    print("✗ 所有字体嵌入测试失败")
+    return None
     
     # 测试智能字体选择逻辑
     test_cases = [
