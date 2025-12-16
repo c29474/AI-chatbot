@@ -167,7 +167,6 @@ def translate_mixed_language_prompt(user_request: str, target_language: str) -> 
         chinese_russian_map = {
             '印度': 'Индия',
             '德国': 'Германия',
-            '矮人': 'гном',
             '医生': 'врач',
             '水手': 'моряк',
             '男': 'мужчина',
@@ -208,6 +207,7 @@ def translate_mixed_language_prompt(user_request: str, target_language: str) -> 
             '中国': 'Китай',
             '日本': 'Япония',
             '俄罗斯': 'Россия',
+            '巴西': 'Бразилия',
             '战士': 'воин',
             '法师': 'маг',
             '弓箭手': 'лучник',
