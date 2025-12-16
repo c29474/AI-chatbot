@@ -633,7 +633,13 @@ function updateCharacterForm() {
         } else {
             // 在俄语模式下，使用中文键和俄语值的组合
             // 这样可以确保API接收到正确的中文键，同时显示俄语值给用户
-            return ruOptions;
+            const combinedOptions = {};
+            Object.keys(zhOptions).forEach(key => {
+                // 查找对应的俄语值
+                const ruValue = ruOptions[key];
+                combinedOptions[key] = ruValue || zhOptions[key];
+            });
+            return combinedOptions;
         }
     };
     

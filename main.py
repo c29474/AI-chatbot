@@ -576,9 +576,9 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     
     t = pdf_translations.get(language, pdf_translations["zh"])
     
-    # 改进的字体注册和选择逻辑
-    def setup_pdf_fonts(language):
-        """设置支持多语言的PDF字体"""
+    # 改进的字体注册和选择逻辑 - 优先支持俄语和中文
+    def setup_pdf_fonts(language, character_data):
+        """设置支持多语言的PDF字体，优先俄语字体，其次中文字体"""
         available_fonts = []
         selected_font = 'Helvetica'
         
@@ -588,20 +588,23 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             
             # 扩展字体路径，包含更多Unicode字体选项
             font_paths = {
-                # 中文支持字体
-                'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
-                'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
-                'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
-                'FangSong': 'C:\\Windows\\Fonts\\simfang.ttf',  # 仿宋
-                'KaiTi': 'C:\\Windows\\Fonts\\simkai.ttf',  # 楷体
-                
-                # 俄语支持字体
+                # 俄语优先字体 - Times New Roman Cyrillic
+                'Times New Roman Cyrillic': 'C:\\Windows\\Fonts\\times.ttf',
                 'Times New Roman': 'C:\\Windows\\Fonts\\times.ttf',
+                
+                # 俄语备用字体
                 'Arial': 'C:\\Windows\\Fonts\\arial.ttf',
                 'Arial Unicode MS': 'C:\\Windows\\Fonts\\arialuni.ttf',
                 'Calibri': 'C:\\Windows\\Fonts\\calibri.ttf',
                 'Cambria': 'C:\\Windows\\Fonts\\cambria.ttc',
                 'Tahoma': 'C:\\Windows\\Fonts\\tahoma.ttf',
+                
+                # 中文支持字体
+                'Microsoft YaHei': 'C:\\Windows\\Fonts\\msyh.ttc',  # 微软雅黑
+                'SimHei': 'C:\\Windows\\Fonts\\simhei.ttf',  # 黑体
+                'SimSun': 'C:\\Windows\\Fonts\\simsun.ttc',  # 宋体
+                'FangSong': 'C:\\Windows\\Fonts\\simfang.ttf',  # 仿宋
+                'KaiTi': 'C:\\Windows\\Fonts\\simkai.ttf',  # 楷体
                 
                 # 通用Unicode字体
                 'DejaVu Sans': 'C:\\Windows\\Fonts\\DejaVuSans.ttf',
@@ -618,31 +621,83 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
                         print(f"[PDF生成] 注册字体 {font_name} 失败: {e}")
                         continue
             
-            # 简化字体选择：强制使用支持中文的字体
-            # 无论输入什么语言，都优先选择支持中文的字体，避免中文乱码
-            chinese_fonts = [
-                'Microsoft YaHei',   # 微软雅黑，支持中文和西文
-                'SimHei',            # 黑体，支持中文
-                'SimSun',            # 宋体，支持中文
-                'Arial Unicode MS',  # 支持最广泛的Unicode字体
-                'DejaVu Sans'        # 开源Unicode字体
-            ]
+            # 检测文本内容中的语言特征
+            text_content = character_data.get('description', '') + character_data.get('name', '')
+            has_russian = any(char in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ' for char in text_content)
+            has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text_content)
             
-            # 优先选择支持中文的字体
-            for font in chinese_fonts:
-                if font in available_fonts:
-                    selected_font = font
-                    break
+            print(f"[PDF生成] 语言检测 - 俄语: {has_russian}, 中文: {has_chinese}")
             
-            # 如果找不到中文字体，使用默认字体
+            # 智能字体选择策略：优先俄语，其次中文
+            if has_russian:
+                # 俄语优先字体选择
+                russian_fonts = [
+                    'Times New Roman Cyrillic',  # 首选俄语字体
+                    'Times New Roman',           # 备用
+                    'Arial',                     # 通用西文字体
+                    'Arial Unicode MS',          # 广泛Unicode支持
+                    'Calibri',                   # 现代字体
+                    'Cambria',                   # 衬线字体
+                    'Tahoma'                     # 无衬线字体
+                ]
+                
+                for font in russian_fonts:
+                    if font in available_fonts:
+                        selected_font = font
+                        print(f"[PDF生成] 选择俄语字体: {selected_font}")
+                        break
+                
+                # 如果俄语字体不可用，检查是否需要中文支持
+                if selected_font == 'Helvetica' and has_chinese:
+                    chinese_fonts = [
+                        'Microsoft YaHei',   # 微软雅黑，支持中文和西文
+                        'SimHei',            # 黑体
+                        'SimSun',            # 宋体
+                        'Arial Unicode MS',  # 广泛Unicode支持
+                        'DejaVu Sans'        # 开源Unicode字体
+                    ]
+                    
+                    for font in chinese_fonts:
+                        if font in available_fonts:
+                            selected_font = font
+                            print(f"[PDF生成] 俄语字体不可用，选择中文字体: {selected_font}")
+                            break
+            
+            elif has_chinese:
+                # 中文优先字体选择
+                chinese_fonts = [
+                    'Microsoft YaHei',   # 微软雅黑
+                    'SimHei',            # 黑体
+                    'SimSun',            # 宋体
+                    'Arial Unicode MS',  # 广泛Unicode支持
+                    'DejaVu Sans'        # 开源Unicode字体
+                ]
+                
+                for font in chinese_fonts:
+                    if font in available_fonts:
+                        selected_font = font
+                        print(f"[PDF生成] 选择中文字体: {selected_font}")
+                        break
+            
+            # 如果以上都不适用，根据语言偏好选择
+            elif language == "ru":
+                # 俄语语言偏好
+                russian_fonts = ['Times New Roman Cyrillic', 'Times New Roman', 'Arial', 'Arial Unicode MS']
+                for font in russian_fonts:
+                    if font in available_fonts:
+                        selected_font = font
+                        print(f"[PDF生成] 根据语言偏好选择俄语字体: {selected_font}")
+                        break
+            
+            # 如果找不到合适的字体，使用可用字体
             if selected_font == 'Helvetica':
-                # 尝试使用其他可用字体
                 for font in available_fonts:
                     if font != 'Helvetica':
                         selected_font = font
+                        print(f"[PDF生成] 使用备用字体: {selected_font}")
                         break
             
-            print(f"[PDF生成] 最终选择字体: {selected_font} (语言: {language})")
+            print(f"[PDF生成] 最终选择字体: {selected_font} (语言: {language}, 俄语内容: {has_russian}, 中文内容: {has_chinese})")
             
         except ImportError:
             print("[PDF生成] 无法导入字体模块，使用默认字体")
@@ -652,7 +707,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         return selected_font, available_fonts
     
     # 设置字体
-    selected_font, available_fonts = setup_pdf_fonts(language)
+    selected_font, available_fonts = setup_pdf_fonts(language, character_data)
     
     # 创建支持多语言的样式 - 改进编码设置
     styles = getSampleStyleSheet()
@@ -672,7 +727,53 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             print(f"[PDF生成] 文本编码处理错误: {e}")
             return str(text) if text else ""
     
-    # 创建样式
+    # 智能字体选择函数
+    def get_optimal_font(text, available_fonts):
+        """根据文本内容选择最优字体"""
+        if not text:
+            return selected_font
+        
+        # 检测字符类型
+        has_russian = any(char in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ' for char in text)
+        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
+        
+        # 优先选择俄语字体
+        if has_russian:
+            russian_fonts = ['Times New Roman Cyrillic', 'Times New Roman', 'Arial', 'Arial Unicode MS', 'Calibri', 'Cambria', 'Tahoma']
+            for font in russian_fonts:
+                if font in available_fonts:
+                    return font
+        
+        # 其次选择中文字体
+        if has_chinese:
+            chinese_fonts = ['Microsoft YaHei', 'SimHei', 'SimSun', 'Arial Unicode MS', 'DejaVu Sans']
+            for font in chinese_fonts:
+                if font in available_fonts:
+                    return font
+        
+        # 默认返回主字体
+        return selected_font
+    
+    # 智能段落创建函数
+    def smart_paragraph(text, base_style):
+        """智能创建段落，根据内容选择最佳字体"""
+        if not text:
+            return Paragraph(safe_text(""), base_style)
+        
+        # 获取最佳字体
+        optimal_font = get_optimal_font(text, available_fonts)
+        
+        # 创建动态样式
+        dynamic_style = ParagraphStyle(
+            f'DynamicStyle_{optimal_font}',
+            parent=base_style,
+            fontName=optimal_font,
+            encoding='utf-8'
+        )
+        
+        return Paragraph(safe_text(text), dynamic_style)
+    
+    # 创建基础样式
     title_style = ParagraphStyle(
         'CustomTitle',
         fontName=selected_font,
@@ -696,24 +797,28 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         spaceAfter=12,
         encoding='utf-8'
     )
-
-    # 使用safe_text处理所有文本内容
-    def safe_paragraph(text, style):
-        """安全创建段落，处理编码问题"""
-        try:
-            return Paragraph(safe_text(text), style)
-        except Exception as e:
-            print(f"[PDF生成] 创建段落失败: {e}")
-            # 如果失败，尝试使用纯文本
-            return Paragraph(safe_text(str(text)), style)
     
+    # 描述文本专用样式
+    desc_style = ParagraphStyle(
+        'DescriptionStyle',
+        fontName=selected_font,
+        fontSize=10,
+        leading=14,
+        encoding='utf-8',
+        spaceBefore=6,
+        spaceAfter=6,
+        firstLineIndent=20,
+        alignment=4,
+        wordWrap=True
+    )
+
     # 创建文档模板和故事流
     doc = SimpleDocTemplate(pdf_filename, pagesize=A4)
     story = []
     
     # 根据语言生成标题
     title_text = f"{safe_text(t['title'])}: {safe_text(character_data.get('name', '未知角色'))}"
-    story.append(safe_paragraph(title_text, title_style))
+    story.append(smart_paragraph(title_text, title_style))
     story.append(Spacer(1, 12))
     
     if image_path and os.path.exists(image_path):
@@ -758,7 +863,7 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
         except Exception as e:
             print(f"[PDF生成] 处理图片时出错: {e}")
 
-    # 生成多语言详情 - 使用safe_text处理所有文本
+    # 生成多语言详情 - 使用smart_paragraph处理所有文本
     details = [
         f"{safe_text(t['gender'])}: {safe_text(character_data.get('gender', ''))}",
         f"{safe_text(t['age'])}: {safe_text(character_data.get('age', ''))}",
@@ -772,27 +877,13 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
     ]
     
     for detail in details:
-        story.append(safe_paragraph(detail, body_style))
+        story.append(smart_paragraph(detail, body_style))
         story.append(Spacer(1, 6))
 
     if character_data.get('description'):
         story.append(Spacer(1, 12))
-        story.append(safe_paragraph(f"{safe_text(t['description'])}:", heading_style))
+        story.append(smart_paragraph(f"{safe_text(t['description'])}:", heading_style))
         story.append(Spacer(1, 6))
-        
-        # 改进的描述样式 - 更好的可读性
-        desc_style = ParagraphStyle(
-            'DescriptionStyle',
-            fontName=selected_font,
-            fontSize=10,  # 稍微增大字体
-            leading=14,   # 增加行间距
-            encoding='utf-8',
-            spaceBefore=6,
-            spaceAfter=6,
-            firstLineIndent=20,  # 首行缩进
-            alignment=4,  # 两端对齐
-            wordWrap=True  # 自动换行
-        )
         
         # 对描述文本进行格式化处理
         description = safe_text(character_data['description'])
@@ -837,12 +928,12 @@ def generate_character_pdf(character_data: dict, image_path: Optional[str], lang
             paragraphs.append(sentence_connector.join(current_para) + sentence_connector.strip())
         
         # 添加描述标题
-        story.append(safe_paragraph(f"▪️ {safe_text(t['description'])}", heading_style))
+        story.append(smart_paragraph(f"▪️ {safe_text(t['description'])}", heading_style))
         story.append(Spacer(1, 4))
         
         # 添加格式化后的段落
         for para in paragraphs:
-            story.append(safe_paragraph(para, desc_style))
+            story.append(smart_paragraph(para, desc_style))
             story.append(Spacer(1, 8))
 
 
@@ -958,6 +1049,8 @@ def create_fallback_pdf(filename, character_data, translations, font_name):
     c.save()
     return filename
 
+
+
 # ==================== API端点 ====================
 @app.get("/")
 async def root():
@@ -982,6 +1075,99 @@ async def health_check():
         "text_model": TEXT_MODEL_ID,
         "image_model": IMAGE_MODEL_ID
     }
+
+@app.get("/api/test-fonts")
+async def test_fonts():
+    """测试字体支持功能"""
+    try:
+        # 运行字体测试
+        test_pdf_font_support()
+        return {
+            "status": "success",
+            "message": "字体测试完成，请查看控制台输出",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+        "status": "error",
+        "message": f"字体测试失败: {str(e)}",
+        "timestamp": datetime.now().isoformat()
+    }
+
+def test_pdf_font_support():
+    """测试PDF字体支持功能"""
+    print("=== PDF字体支持测试 ===")
+    
+    # 测试智能字体选择逻辑
+    test_cases = [
+        {
+            "name": "纯俄语测试",
+            "text": "Александр Петров - опытный врач из Москвы",
+            "expected_font_priority": ["Times New Roman Cyrillic", "Times New Roman", "Arial"]
+        },
+        {
+            "name": "纯中文测试", 
+            "text": "张伟是一位经验丰富的医生，来自北京",
+            "expected_font_priority": ["Microsoft YaHei", "SimHei", "SimSun"]
+        },
+        {
+            "name": "混合语言测试",
+            "text": "伊万·张是一位中俄混血医生。Ivan Zhang is a Chinese-Russian doctor",
+            "expected_font_priority": ["Times New Roman Cyrillic", "Times New Roman", "Arial"]
+        },
+        {
+            "name": "英文测试",
+            "text": "This is a test of English text",
+            "expected_font_priority": ["Helvetica", "Arial", "Times New Roman"]
+        }
+    ]
+    
+    # 模拟可用字体列表
+    available_fonts = [
+        "Helvetica", "Times New Roman Cyrillic", "Times New Roman", 
+        "Arial", "Microsoft YaHei", "SimHei", "SimSun"
+    ]
+    
+    for test_case in test_cases:
+        print(f"\n--- 测试: {test_case['name']} ---")
+        print(f"测试文本: {test_case['text']}")
+        
+        try:
+            # 测试字体选择逻辑
+            selected_font = get_optimal_font(test_case['text'], available_fonts)
+            print(f"选择字体: {selected_font}")
+            
+            # 验证字体选择是否符合预期优先级
+            if selected_font in test_case['expected_font_priority']:
+                print(f"✓ 字体选择正确: {selected_font} 在预期优先级列表中")
+            else:
+                print(f"⚠ 字体选择可能不理想: {selected_font} 不在预期优先级列表中")
+                print(f"预期优先级: {test_case['expected_font_priority']}")
+                
+        except Exception as e:
+            print(f"测试失败: {e}")
+    
+    # 测试语言检测功能
+    print("\n--- 语言检测测试 ---")
+    test_texts = [
+        ("俄语文本", "Александр Петров", True, False),
+        ("中文文本", "张伟医生", False, True),
+        ("混合文本", "伊万·张 Ivan Zhang", True, True),
+        ("英文文本", "English text only", False, False)
+    ]
+    
+    for name, text, expected_russian, expected_chinese in test_texts:
+        has_russian = any(char in 'абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ' for char in text)
+        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text)
+        
+        print(f"{name}: '{text}' -> 俄语: {has_russian} (预期: {expected_russian}), 中文: {has_chinese} (预期: {expected_chinese})")
+        
+        if has_russian == expected_russian and has_chinese == expected_chinese:
+            print("✓ 语言检测正确")
+        else:
+            print("⚠ 语言检测可能存在问题")
+    
+    print("\n=== 测试完成 ===")
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
