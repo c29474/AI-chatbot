@@ -583,6 +583,19 @@ function generateWelcomeMessage() {
     const t = translations[currentLanguage];
     const welcomeContent = document.getElementById('welcomeContent');
     
+    // 添加空值检查，防止在DOM未完全加载时出错
+    if (!welcomeContent) {
+        console.warn('welcomeContent元素未找到，稍后重试');
+        // 延迟重试一次
+        setTimeout(() => {
+            const retryElement = document.getElementById('welcomeContent');
+            if (retryElement) {
+                generateWelcomeMessage();
+            }
+        }, 100);
+        return;
+    }
+    
     let welcomeHTML = `<strong>🤖 ${t.title}</strong><br>`;
     welcomeHTML += `<span>${t.welcomeMessage}</span>`;
     welcomeHTML += `<ul style="margin-top: 10px; padding-left: 20px;">`;
@@ -1373,7 +1386,6 @@ function newConversation() {
     const t = translations[currentLanguage];
     if (confirm(t.newChatConfirm)) {
         clearConversation();
-        addMessage(t.welcomeMessage, false);
     }
 }
 
@@ -1388,16 +1400,7 @@ function clearConversation() {
     localStorage.removeItem('chatLanguage');
     
     // 重新添加欢迎消息
-    const t = translations[currentLanguage];
-    addMessage(`<strong>🤖 ${t.title}</strong><br>
-        <span>${t.welcomeMessage}</span>
-        <ul style="margin-top: 10px; padding-left: 20px;">
-            <li>💬 ${t.features.chat}</li>
-            <li>👤 ${t.features.character}</li>
-            <li>📚 ${t.features.book}</li>
-            <li>🖼️ ${t.features.pdf}</li>
-        </ul>
-        <div class="command-hint">${t.commandHint}</div>`, false);
+    generateWelcomeMessage();
 }
 
 // 处理快速操作
