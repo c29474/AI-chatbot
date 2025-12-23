@@ -19,3 +19,33 @@
 ✅ APIKey: 21aca9874cfd4465704c1a1498e2f931
 ✅ APISecret: NDBhMGRlYjFmODg1MDE1NzAxYWQwMmFk
 
+### 1. 创建虚拟环境
+```
+python -m venv venv
+```
+### 2. 激活虚拟环境
+```
+ venv/Scripts/activate
+```
+### 3. 批量安装requirements.txt
+```
+pip install -r requirements.txt
+```
+### 查看已安装的包
+```
+pip list
+```
+### 导出当前环境依赖
+```
+pip freeze > requirements.txt
+```
+### 退出虚拟环境
+```
+deactivate
+```
+### 删除虚拟环境（直接删除venv文件夹）
+```
+rmdir /s venv  # Windows
+rm -rf venv    # Linux/Mac
+```
+## 使用说明
